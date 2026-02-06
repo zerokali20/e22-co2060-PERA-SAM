@@ -3,8 +3,8 @@ layout: home
 permalink: index.html
 
 # Please update this with your repository name and project title
-repository-name: eYY-co2060-project-template
-title: Project Template
+repository-name: e22-co2060-PERA-SAM
+title: PERA-SAM (Sound Analysis Manger)
 ---
 
 [comment]: # "This is the standard layout for the project, but you can clean this and use your own template, and add more information required for your own project"
@@ -19,14 +19,16 @@ If your followed all the given instructions correctly, your repository will be a
 
 A HTML template integrated with the given GitHub repository templates, based on github.com/cepdnaclk/eYY-project-theme . If you like to remove this default theme and make your own web page, you can remove the file, docs/_config.yml and create the site using HTML. -->
 
-# Project Title
+# PERA-SAM 🔧
+### 🩺 AI Sound Analyst & Health Manager for Industrial Assets
 
 ---
 
 ## Team
--  eNumber, Name, [email](mailto:name@email.com)
--  eNumber, Name, [email](mailto:name@email.com)
--  eNumber, Name, [email](mailto:name@email.com)
+-  E/22/184, Karunanayake K.P.B.P. , [email](mailto:e22184@eng.pdn.ac.lk)
+-  E/22/396, Thilakarathna M. A. P. P., [email](mailto:e22396@eng.pdn.ac.lk)
+-  E/22/188, Kavindya R. M. D. , [email](mailto:e22188@eng.pdn.ac.lk)
+-  E/22/336, Sadaruwan D. M. D. , [email](mailto:e22336@eng.pdn.ac.lk)
 
 <!-- Image (photo/drawing of the final hardware) should be here -->
 
@@ -42,31 +44,34 @@ A HTML template integrated with the given GitHub repository templates, based on 
 5. [Conclusion](#conclusion)
 6. [Links](#links)
 
-## Introduction
+## 📖 Introduction
 
-Description of the real world problem and solution, impact
+PERA-SAM (Predictive Equipment Reliability & Acoustics - Sound Analysis Manager) is a centralized acoustic management system designed to listen to the "heartbeat" of machines.
 
+Traditional maintenance is reactive—fixing things only after they break. PERA-SAM shifts this to a predictive model. By processing acoustic signatures using FFT (Fast Fourier Transform) and MFCC, the system detects subtle frequency shifts caused by friction, imbalances, or wear before catastrophic failure occurs.
+
+Currently prototyped for laptop cooling fans, server fans, engine fans, this system is designed to scale up to heavy industrial machinery and vehicle engines.
 
 ## Solution Architecture
 
-High level diagram + description
+<!--High level diagram + description -->
 
 ## Software Designs
 
-Detailed designs with many sub-sections
+
 
 ## Testing
 
-Testing done on software : detailed + summarized results
+
 
 ## Conclusion
 
-What was achieved, future developments, commercialization plans
+
 
 ## Links
 
-- [Project Repository](https://github.com/cepdnaclk/{{ page.repository-name }}){:target="_blank"}
-- [Project Page](https://cepdnaclk.github.io/{{ page.repository-name}}){:target="_blank"}
+- [Project Repository](https://github.com/cepdnaclk/e22-co2060-PERA-SAM)
+- [Project Page](https://cepdnaclk.github.io/e22-co2060-PERA-SAM)
 - [Department of Computer Engineering](http://www.ce.pdn.ac.lk/)
 - [University of Peradeniya](https://eng.pdn.ac.lk/)
 
