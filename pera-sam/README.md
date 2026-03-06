@@ -1,73 +1,61 @@
-# React + TypeScript + Vite
+# PERA-SAM: Acoustic Intelligence for Mechanical Diagnostics
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+PERA-SAM is a professional machine learning-powered acoustic analysis platform designed for mechanical diagnostics. It leverages sound analysis to identify anomalies in machinery and equipment.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Sound Analysis**: AI-powered diagnostics of mechanical sounds.
+- **Service Map**: Real-time location-based search for certified service providers.
+- **Dashboard**: Holistic view of analysis history and machine health.
+- **Reporting**: Professional PDF reports for mechanical health checks.
 
-## React Compiler
+## Technology Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend**: Vite, React, TypeScript, Tailwind CSS, shadcn/ui.
+- **Backend**: FastAPI, Python, TensorFlow, Librosa.
+- **Database**: Supabase.
+- **Mapping**: Leaflet, React-Leaflet.
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Prerequisites
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Node.js (v18+)
+- Python (v3.9+)
+- Docker (Optional, for containerized deployment)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Local Development
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+1. **Clone the repository**:
+   ```sh
+   git clone <repository-url>
+   cd PERA-SAM-TEST
+   ```
+
+2. **Frontend Setup**:
+   ```sh
+   npm install
+   npm run dev
+   ```
+
+3. **Backend Setup**:
+   Navigate to the `Model/server` directory and install dependencies:
+   ```sh
+   cd ../Model/server
+   pip install -r requirements.txt
+   uvicorn main:app --reload
+   ```
+
+## Docker Deployment
+
+To run both frontend and backend using Docker:
+
+```sh
+docker-compose up --build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The frontend will be available at `http://localhost:8080` and the backend at `http://localhost:8000`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## License
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+All rights reserved. Professional use only.
