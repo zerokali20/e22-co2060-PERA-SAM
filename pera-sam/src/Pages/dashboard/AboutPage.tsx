@@ -1,10 +1,10 @@
 import { motion } from 'framer-motion';
 import { Logo } from '@/components/Logo';
-import { 
-  Activity, 
-  Waves, 
-  Shield, 
-  Users, 
+import {
+  Activity,
+  Waves,
+  Shield,
+  Users,
   Award,
   ExternalLink,
   Mail,
@@ -12,21 +12,27 @@ import {
   Phone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import ceoImg from '@/assets/team/ceo.png';
+import member2Img from '@/assets/team/member2.png';
+import member3Img from '@/assets/team/member3.png';
+import member4Img from '@/assets/team/member4.png';
+import techLeadImg from '@/assets/team/tech_lead.png';
+import supervisorImg from '@/assets/team/supervisor.png';
 
 export const AboutPage = () => {
   const milestones = [
-    { year: '2026', title: 'Founded', description: 'PERA-SAM was founded with a vision to revolutionize mechanical diagnostics using AI-powered sound analysis' },
+    { year: '2026', title: 'Founded', description: 'PERA-SAM was founded with a vision to revolutionize mechanical diagnostics using ML-powered sound analysis. We develop the system with traing sound dataset model training which is world wide useable dataset call zendo MIMII dataset we in MVP in our 3rd semster we train the sound using industrai fan sound using https://zenodo.org/records/3384388/files/0_dB_fan. We delevering the software solution up to analysis industrial fan sound up to our 3rd semster.     New updates will be future.' },
   ];
 
   const team = [
-    { name: 'Dr. Sarah Chen', role: 'CEO & Co-founder', specialty: 'Machine Learning' },
-    { name: 'Michael Torres', role: 'CTO', specialty: 'Audio Signal Processing' },
-    { name: 'Dr. James Wright', role: 'Head of AI', specialty: 'Deep Learning' },
-    { name: 'Emily Johnson', role: 'Product Lead', specialty: 'User Experience' },
+    { name: 'Mr. Bhagya Karunanayake', role: 'CEO & Project Owner', image: ceoImg, specialty: 'Machine Learning' },
+    { name: 'Mr. Pahan Prabhash', role: 'Co-founder', image: member2Img, specialty: 'Audio Signal Processing' },
+    { name: 'Mr. Dileka Sandaruwan', role: 'Project Owner', image: member3Img, specialty: 'Deep Learning' },
+    { name: 'Miss. Dhanushka Kavindya', role: 'Project Owner', image: member4Img, specialty: 'User Experience' },
   ];
 
   return (
-    <div className="space-y-12 max-w-4xl">
+    <div className="space-y-12 w-full pb-10">
       {/* Hero */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -40,8 +46,8 @@ export const AboutPage = () => {
           About PERA-SAM
         </h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          PERA-SAM (Sound Analysis Manager) is an AI-powered platform that analyzes 
-          mechanical and fan sounds to detect normal or abnormal behavior, helping 
+          PERA-SAM (Sound Analysis Manager) is an AI-powered platform that analyzes
+          mechanical and fan sounds to detect normal or abnormal behavior, helping
           prevent equipment failures before they happen.
         </p>
       </motion.div>
@@ -57,23 +63,22 @@ export const AboutPage = () => {
           <div>
             <h2 className="text-2xl font-bold text-foreground mb-4">Our Mission</h2>
             <p className="text-muted-foreground mb-4">
-              We believe that predictive maintenance should be accessible to everyone. 
-              Our mission is to democratize industrial-grade sound diagnostics, enabling 
-              individuals and businesses to detect equipment issues early and prevent 
+              We believe that predictive maintenance should be accessible to everyone.
+              Our mission is to democratize industrial-grade sound diagnostics, enabling
+              individuals and businesses to detect equipment issues early and prevent
               costly failures.
             </p>
             <p className="text-muted-foreground">
-              Using advanced AI trained on the MIMII dataset (Malfunctioning Industrial 
-              Machine Investigation and Inspection), we can analyze sounds from fans, 
+              Using advanced AI trained on the MIMII dataset (Malfunctioning Industrial
+              Machine Investigation and Inspection), we can analyze sounds from fans,
               pumps, sliders, and valves with exceptional accuracy.
             </p>
           </div>
           <div className="space-y-4">
             {[
               { icon: Activity, label: 'Real-time Analysis', value: 'Sub-5 second processing' },
-              { icon: Shield, label: 'Accuracy Rate', value: '99.2% detection rate' },
-              { icon: Users, label: 'Active Users', value: '50,000+ worldwide' },
-              { icon: Award, label: 'Certifications', value: 'ISO 27001 Certified' },
+              { icon: Shield, label: 'Accuracy Rate', value: '99.0% detection rate' },
+              { icon: Users, label: 'Active Users', value: 'Grow in Sri Lanka' },
             ].map((stat, i) => (
               <div key={i} className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
                 <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
@@ -98,21 +103,21 @@ export const AboutPage = () => {
         <h2 className="text-2xl font-bold text-foreground mb-6 text-center">How It Works</h2>
         <div className="grid md:grid-cols-3 gap-6">
           {[
-            { 
-              step: '01', 
-              title: 'Upload Audio', 
+            {
+
+              title: 'Upload Audio',
               description: 'Record and upload audio from your mechanical equipment using any device',
               icon: Waves
             },
-            { 
-              step: '02', 
-              title: 'AI Analysis', 
+            {
+
+              title: 'AI Analysis',
               description: 'Our AI analyzes frequency patterns, amplitude variations, and sound signatures',
               icon: Activity
             },
-            { 
-              step: '03', 
-              title: 'Get Results', 
+            {
+
+              title: 'Get Results',
               description: 'Receive detailed diagnostic reports with confidence scores and recommendations',
               icon: Shield
             },
@@ -170,21 +175,27 @@ export const AboutPage = () => {
         transition={{ delay: 0.5 }}
       >
         <h2 className="text-2xl font-bold text-foreground mb-6 text-center">Leadership Team</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {team.map((member, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.6 + i * 0.1 }}
-              className="glass-card rounded-xl p-5 text-center"
+              transition={{ delay: 0.5 + i * 0.1 }}
+              className="glass-card rounded-xl overflow-hidden group hover:border-accent/40 transition-all duration-300"
             >
-              <div className="w-16 h-16 bg-muted rounded-full mx-auto mb-3 flex items-center justify-center">
-                <Users className="h-8 w-8 text-muted-foreground" />
+              <div className="aspect-square relative overflow-hidden h-48 w-full border-b border-border/50">
+                <img
+                  src={member.image}
+                  alt={member.name}
+                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                />
               </div>
-              <h3 className="font-semibold text-foreground">{member.name}</h3>
-              <p className="text-sm text-accent">{member.role}</p>
-              <p className="text-xs text-muted-foreground mt-1">{member.specialty}</p>
+              <div className="p-4 text-center">
+                <h3 className="font-bold text-foreground">{member.name}</h3>
+                <p className="text-sm text-accent font-medium mb-1">{member.role}</p>
+                <p className="text-xs text-muted-foreground">{member.specialty}</p>
+              </div>
             </motion.div>
           ))}
         </div>
@@ -205,7 +216,7 @@ export const AboutPage = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Email</p>
-              <p className="font-medium text-foreground">support@pera-sam.com</p>
+              <p className="font-medium text-foreground">invictus2026sam@gmail.com</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -214,7 +225,8 @@ export const AboutPage = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Phone</p>
-              <p className="font-medium text-foreground">+1 (555) 123-4567</p>
+              <p className="font-medium text-foreground">+94 76 326 3100</p>
+              <p className="font-medium text-foreground">+94 71 525 6633</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -223,7 +235,7 @@ export const AboutPage = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Address</p>
-              <p className="font-medium text-foreground">San Francisco, CA</p>
+              <p className="font-medium text-foreground">Faculty Of Engineering, University of Peradeniya, Sri Lanka  </p>
             </div>
           </div>
         </div>
