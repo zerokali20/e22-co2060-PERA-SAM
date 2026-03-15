@@ -17,8 +17,15 @@ import {
 import { toast } from 'sonner';
 
 export const SettingsPage = () => {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    address: user?.address || '',
+  });
+
   const [settings, setSettings] = useState({
     notifications: {
       email: true,
@@ -35,13 +42,23 @@ export const SettingsPage = () => {
 
   const handleSave = async () => {
     setIsSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsSaving(false);
-    toast.success('Settings saved successfully');
+    try {
+      await updateProfile({
+        name: formData.name,
+        phone: formData.phone,
+        address: formData.address,
+      });
+      toast.success('Profile settings saved and persisted!');
+    } catch (error) {
+      console.error('Save error:', error);
+      toast.error('Failed to save settings');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 w-full max-w-5xl mx-auto pb-10">
       <div>
         <h1 className="text-3xl font-bold text-foreground">Settings</h1>
         <p className="text-muted-foreground mt-1">
@@ -69,21 +86,42 @@ export const SettingsPage = () => {
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="name">Full Name</Label>
-              <Input id="name" defaultValue={user?.name} className="mt-1.5" />
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                className="mt-1.5"
+              />
             </div>
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" defaultValue={user?.email} className="mt-1.5" />
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                readOnly
+                className="mt-1.5 bg-muted/50 cursor-not-allowed"
+              />
             </div>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="phone">Phone Number</Label>
-              <Input id="phone" defaultValue={user?.phone || ''} className="mt-1.5" />
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={e => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                className="mt-1.5"
+              />
             </div>
             <div>
               <Label htmlFor="address">Address</Label>
-              <Input id="address" defaultValue={user?.address || ''} className="mt-1.5" />
+              <Input
+                id="address"
+                value={formData.address}
+                onChange={e => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                className="mt-1.5"
+              />
             </div>
           </div>
         </div>
@@ -121,7 +159,7 @@ export const SettingsPage = () => {
               </div>
               <Switch
                 checked={settings.notifications[item.key as keyof typeof settings.notifications]}
-                onCheckedChange={(checked) => 
+                onCheckedChange={(checked) =>
                   setSettings(prev => ({
                     ...prev,
                     notifications: { ...prev.notifications, [item.key]: checked }
@@ -158,7 +196,7 @@ export const SettingsPage = () => {
             </div>
             <Switch
               checked={settings.privacy.shareReports}
-              onCheckedChange={(checked) => 
+              onCheckedChange={(checked) =>
                 setSettings(prev => ({
                   ...prev,
                   privacy: { ...prev.privacy, shareReports: checked }
@@ -173,7 +211,7 @@ export const SettingsPage = () => {
             </div>
             <Switch
               checked={settings.privacy.publicProfile}
-              onCheckedChange={(checked) => 
+              onCheckedChange={(checked) =>
                 setSettings(prev => ({
                   ...prev,
                   privacy: { ...prev.privacy, publicProfile: checked }
@@ -185,7 +223,7 @@ export const SettingsPage = () => {
 
         <div className="mt-6 p-4 bg-muted rounded-lg">
           <p className="text-sm text-muted-foreground">
-            <strong className="text-foreground">Data Security:</strong> Your audio files are encrypted 
+            <strong className="text-foreground">Data Security:</strong> Your audio files are encrypted
             during transmission and storage. We never share your data with third parties without your consent.
           </p>
         </div>
