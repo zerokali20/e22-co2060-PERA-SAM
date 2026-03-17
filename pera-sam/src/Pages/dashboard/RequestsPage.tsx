@@ -1,59 +1,88 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  MessageSquare, 
+import {
+  MessageSquare,
   Clock,
   CheckCircle,
   XCircle,
   User,
   ChevronRight,
   Waves,
-  MapPin
+  MapPin,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/lib/auth-context';
+import { toast } from 'sonner';
 
-// Demo repair requests
-const demoRequests = [
-  {
-    id: '1',
-    userName: 'John Smith',
-    userEmail: 'john@example.com',
-    machineType: 'Laptop Fan',
-    brand: 'Dell XPS 15',
-    status: 'pending',
-    description: 'Loud rattling noise coming from the laptop fan during high load operations.',
-    analysisId: 'AN-001',
-    createdAt: '2024-01-15T10:30:00',
-    confidence: 87.2,
-  },
-  {
-    id: '2',
-    userName: 'Sarah Johnson',
-    userEmail: 'sarah@example.com',
-    machineType: 'Vehicle Engine',
-    brand: 'Toyota Camry',
-    status: 'accepted',
-    description: 'Engine making unusual ticking sound when cold starting.',
-    analysisId: 'AN-002',
-    createdAt: '2024-01-14T14:15:00',
-    confidence: 92.5,
-  },
-  {
-    id: '3',
-    userName: 'Mike Wilson',
-    userEmail: 'mike@example.com',
-    machineType: 'Server Fan',
-    brand: 'HP ProLiant',
-    status: 'completed',
-    description: 'Server fan vibration detected during peak hours.',
-    analysisId: 'AN-003',
-    createdAt: '2024-01-13T09:00:00',
-    confidence: 78.9,
-  },
-];
+interface RepairRequest {
+  id: string;
+  user_id: string;
+  company_id: string;
+  machine_type: string;
+  brand: string;
+  status: 'pending' | 'accepted' | 'completed' | 'declined';
+  description: string;
+  analysis_id: string | null;
+  created_at: string;
+  profiles: {
+    name: string;
+    phone: string;
+  };
+}
 
 export const RequestsPage = () => {
+  const { user } = useAuth();
+  const [requests, setRequests] = useState<RepairRequest[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<string | null>(null);
+
+  const fetchRequests = async () => {
+    if (!user) return;
+    try {
+      setLoading(true);
+      const { data, error } = await (supabase as any)
+        .from('repair_requests')
+        .select(`
+          *,
+          profiles:user_id (
+            name,
+            phone
+          )
+        `)
+        .eq('company_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setRequests(data as any[] || []);
+    } catch (err) {
+      console.error('Error fetching requests:', err);
+      toast.error('Failed to load repair requests');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, [user]);
+
+  const updateRequestStatus = async (requestId: string, newStatus: string) => {
+    try {
+      const { error } = await (supabase as any)
+        .from('repair_requests')
+        .update({ status: newStatus })
+        .eq('id', requestId);
+
+      if (error) throw error;
+      toast.success(`Request marked as ${newStatus}`);
+      fetchRequests();
+    } catch (err) {
+      console.error('Error updating status:', err);
+      toast.error('Failed to update request status');
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -75,6 +104,30 @@ export const RequestsPage = () => {
     }
   };
 
+  // Dynamic stats calculation
+  const stats = [
+    { label: 'Pending', value: requests.filter(r => r.status === 'pending').length.toString(), color: 'text-warning' },
+    { label: 'In Progress', value: requests.filter(r => r.status === 'accepted').length.toString(), color: 'text-info' },
+    { label: 'Completed', value: requests.filter(r => r.status === 'completed').length.toString(), color: 'text-success' },
+    {
+      label: 'This Week',
+      value: requests.filter(r => {
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        return new Date(r.created_at) > oneWeekAgo;
+      }).length.toString(),
+      color: 'text-foreground'
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-12 w-12 text-accent animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -86,12 +139,7 @@ export const RequestsPage = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Pending', value: '3', color: 'text-warning' },
-          { label: 'In Progress', value: '2', color: 'text-info' },
-          { label: 'Completed', value: '15', color: 'text-success' },
-          { label: 'This Week', value: '8', color: 'text-foreground' },
-        ].map((stat, i) => (
+        {stats.map((stat, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0, y: 20 }}
@@ -107,15 +155,14 @@ export const RequestsPage = () => {
 
       {/* Requests List */}
       <div className="space-y-4">
-        {demoRequests.map((request, index) => (
+        {requests.map((request, index) => (
           <motion.div
             key={request.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
-            className={`glass-card rounded-xl p-5 cursor-pointer transition-all hover:shadow-card-hover ${
-              selectedRequest === request.id ? 'ring-2 ring-accent' : ''
-            }`}
+            className={`glass-card rounded-xl p-5 cursor-pointer transition-all hover:shadow-card-hover ${selectedRequest === request.id ? 'ring-2 ring-accent' : ''
+              }`}
             onClick={() => setSelectedRequest(selectedRequest === request.id ? null : request.id)}
           >
             <div className="flex items-start gap-4">
@@ -124,27 +171,25 @@ export const RequestsPage = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-foreground">{request.userName}</h3>
+                  <h3 className="font-semibold text-foreground">{request.profiles?.name || 'Unknown User'}</h3>
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(request.status)}`}>
                     {getStatusIcon(request.status)}
                     {request.status}
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  {request.machineType} • {request.brand}
+                  {request.machine_type} {request.brand ? `• ${request.brand}` : ''}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
                   {request.description}
                 </p>
                 <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                  <span>Analysis: {request.analysisId}</span>
-                  <span>Confidence: {request.confidence}%</span>
-                  <span>{new Date(request.createdAt).toLocaleDateString()}</span>
+                  {request.analysis_id && <span>Analysis: {request.analysis_id.slice(0, 8)}</span>}
+                  <span>{new Date(request.created_at).toLocaleDateString()}</span>
                 </div>
               </div>
-              <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform ${
-                selectedRequest === request.id ? 'rotate-90' : ''
-              }`} />
+              <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform ${selectedRequest === request.id ? 'rotate-90' : ''
+                }`} />
             </div>
 
             {selectedRequest === request.id && (
@@ -159,13 +204,20 @@ export const RequestsPage = () => {
                     <p className="text-sm text-foreground">{request.description}</p>
                   </div>
                   <div className="p-3 bg-muted/50 rounded-lg">
-                    <p className="text-xs text-muted-foreground mb-1">Contact</p>
-                    <p className="text-sm text-foreground">{request.userEmail}</p>
+                    <p className="text-xs text-muted-foreground mb-1">Contact (Mobile)</p>
+                    <p className="text-sm font-bold text-accent">{request.profiles?.phone || 'No phone provided'}</p>
                   </div>
                 </div>
                 {request.status === 'pending' && (
                   <div className="flex gap-2">
-                    <Button variant="accent" className="flex-1">
+                    <Button
+                      variant="accent"
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateRequestStatus(request.id, 'accepted');
+                      }}
+                    >
                       <CheckCircle className="h-4 w-4 mr-2" />
                       Accept Request
                     </Button>
@@ -173,14 +225,27 @@ export const RequestsPage = () => {
                       <MessageSquare className="h-4 w-4 mr-2" />
                       Message User
                     </Button>
-                    <Button variant="ghost">
+                    <Button
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateRequestStatus(request.id, 'declined');
+                      }}
+                    >
                       <XCircle className="h-4 w-4" />
                     </Button>
                   </div>
                 )}
                 {request.status === 'accepted' && (
                   <div className="flex gap-2">
-                    <Button variant="accent" className="flex-1">
+                    <Button
+                      variant="accent"
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateRequestStatus(request.id, 'completed');
+                      }}
+                    >
                       <CheckCircle className="h-4 w-4 mr-2" />
                       Mark Complete
                     </Button>
@@ -196,7 +261,7 @@ export const RequestsPage = () => {
         ))}
       </div>
 
-      {demoRequests.length === 0 && (
+      {requests.length === 0 && (
         <div className="glass-card rounded-xl p-12 text-center">
           <Waves className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
           <p className="text-muted-foreground">No repair requests yet</p>

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
+import {
   Calendar as CalendarIcon,
   Clock,
   User,
@@ -9,60 +9,114 @@ import {
   ChevronRight,
   Plus,
   CheckCircle,
-  XCircle
+  XCircle,
+  Loader2,
+  Waves
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/lib/auth-context';
+import { toast } from 'sonner';
 
-// Demo appointments
-const demoAppointments = [
-  {
-    id: '1',
-    userName: 'John Smith',
-    userPhone: '+1 555-0123',
-    serviceType: 'Laptop Fan Repair',
-    date: '2024-01-20',
-    time: '10:00 AM',
-    status: 'confirmed',
-    address: '123 Tech Street, San Francisco, CA',
-    notes: 'Dell XPS 15 - Fan making loud noise',
-  },
-  {
-    id: '2',
-    userName: 'Sarah Johnson',
-    userPhone: '+1 555-0456',
-    serviceType: 'Vehicle Engine Diagnostics',
-    date: '2024-01-20',
-    time: '2:00 PM',
-    status: 'pending',
-    address: '456 Motor Ave, San Francisco, CA',
-    notes: 'Toyota Camry 2020 - Engine ticking',
-  },
-  {
-    id: '3',
-    userName: 'Mike Wilson',
-    userPhone: '+1 555-0789',
-    serviceType: 'Server Maintenance',
-    date: '2024-01-22',
-    time: '9:00 AM',
-    status: 'confirmed',
-    address: '789 Data Center Blvd, Oakland, CA',
-    notes: 'HP ProLiant server rack inspection',
-  },
-];
+interface Appointment {
+  id: string;
+  user_id: string;
+  company_id: string;
+  machine_type: string;
+  brand: string;
+  status: 'pending' | 'accepted' | 'completed' | 'declined';
+  description: string;
+  created_at: string;
+  user_profile?: {
+    name: string;
+    phone: string;
+    address: string;
+  };
+  company_profile?: {
+    company_name: string;
+    phone: string;
+    address: string;
+  };
+}
 
 export const AppointmentsPage = () => {
+  const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<string | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchAppointments = async () => {
+    if (!user) return;
+    try {
+      setLoading(true);
+      const isCompany = user.role === 'company';
+
+      let query = (supabase as any).from('repair_requests').select(`
+        *,
+        user_profile:user_id (
+          name,
+          phone,
+          address
+        ),
+        company_profile:company_id (
+          company_name,
+          phone,
+          address
+        )
+      `);
+
+      if (isCompany) {
+        query = query.eq('company_id', user.id);
+      } else {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setAppointments(data || []);
+    } catch (err) {
+      console.error('Error fetching appointments:', err);
+      toast.error('Failed to load appointments');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAppointments();
+  }, [user]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'confirmed': return 'bg-success/10 text-success border-success/20';
+      case 'accepted': return 'bg-success/10 text-success border-success/20';
       case 'pending': return 'bg-warning/10 text-warning border-warning/20';
-      case 'cancelled': return 'bg-destructive/10 text-destructive border-destructive/20';
+      case 'declined': return 'bg-destructive/10 text-destructive border-destructive/20';
+      case 'completed': return 'bg-info/10 text-info border-info/20';
       default: return 'bg-muted text-muted-foreground';
     }
   };
+
+  // Filter by selected date
+  const filteredAppointments = appointments.filter(app => {
+    if (!selectedDate) return true;
+    const appDate = new Date(app.created_at);
+    return (
+      appDate.getDate() === selectedDate.getDate() &&
+      appDate.getMonth() === selectedDate.getMonth() &&
+      appDate.getFullYear() === selectedDate.getFullYear()
+    );
+  });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-12 w-12 text-accent animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -70,13 +124,17 @@ export const AppointmentsPage = () => {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Appointments</h1>
           <p className="text-muted-foreground mt-1">
-            Manage your scheduled service appointments
+            {user?.role === 'company'
+              ? 'Manage your scheduled service appointments'
+              : 'Track your repair requests and appointments'}
           </p>
         </div>
-        <Button variant="accent">
-          <Plus className="h-4 w-4 mr-2" />
-          New Appointment
-        </Button>
+        {!loading && appointments.length > 0 && (
+          <Button variant="accent">
+            <Plus className="h-4 w-4 mr-2" />
+            New Appointment
+          </Button>
+        )}
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -94,15 +152,15 @@ export const AppointmentsPage = () => {
           />
           <div className="mt-4 p-3 bg-muted/50 rounded-lg">
             <p className="text-sm font-medium text-foreground">
-              {selectedDate?.toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+              {selectedDate?.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
               })}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              2 appointments scheduled
+              {filteredAppointments.length} events scheduled
             </p>
           </div>
         </motion.div>
@@ -111,35 +169,34 @@ export const AppointmentsPage = () => {
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center gap-4 mb-4">
             <p className="text-sm text-muted-foreground">
-              Showing {demoAppointments.length} appointments
+              Showing {filteredAppointments.length} entries for this date
             </p>
           </div>
 
-          {demoAppointments.map((appointment, index) => (
+          {filteredAppointments.map((appointment, index) => (
             <motion.div
               key={appointment.id}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.05 }}
-              className={`glass-card rounded-xl p-5 cursor-pointer transition-all hover:shadow-card-hover ${
-                selectedAppointment === appointment.id ? 'ring-2 ring-accent' : ''
-              }`}
+              className={`glass-card rounded-xl p-5 cursor-pointer transition-all hover:shadow-card-hover ${selectedAppointment === appointment.id ? 'ring-2 ring-accent' : ''
+                }`}
               onClick={() => setSelectedAppointment(
                 selectedAppointment === appointment.id ? null : appointment.id
               )}
             >
               <div className="flex items-start gap-4">
                 <div className="w-14 h-14 bg-accent/10 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(appointment.date).toLocaleDateString('en-US', { month: 'short' })}
+                  <span className="text-xs text-muted-foreground uppercase">
+                    {new Date(appointment.created_at).toLocaleDateString('en-US', { month: 'short' })}
                   </span>
                   <span className="text-lg font-bold text-accent">
-                    {new Date(appointment.date).getDate()}
+                    {new Date(appointment.created_at).getDate()}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-foreground">{appointment.serviceType}</h3>
+                    <h3 className="font-semibold text-foreground">{appointment.machine_type}</h3>
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(appointment.status)}`}>
                       {appointment.status}
                     </span>
@@ -147,21 +204,26 @@ export const AppointmentsPage = () => {
                   <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5" />
-                      {appointment.time}
+                      {new Date(appointment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     <span className="flex items-center gap-1">
                       <User className="h-3.5 w-3.5" />
-                      {appointment.userName}
+                      {user?.role === 'company'
+                        ? appointment.user_profile?.name
+                        : appointment.company_profile?.company_name}
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span className="truncate">{appointment.address}</span>
+                    <span className="truncate">
+                      {user?.role === 'company'
+                        ? appointment.user_profile?.address
+                        : appointment.company_profile?.address}
+                    </span>
                   </p>
                 </div>
-                <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform flex-shrink-0 ${
-                  selectedAppointment === appointment.id ? 'rotate-90' : ''
-                }`} />
+                <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform flex-shrink-0 ${selectedAppointment === appointment.id ? 'rotate-90' : ''
+                  }`} />
               </div>
 
               {selectedAppointment === appointment.id && (
@@ -172,58 +234,40 @@ export const AppointmentsPage = () => {
                 >
                   <div className="grid md:grid-cols-2 gap-4 mb-4">
                     <div className="p-3 bg-muted/50 rounded-lg">
-                      <p className="text-xs text-muted-foreground mb-1">Contact</p>
-                      <p className="text-sm text-foreground flex items-center gap-2">
+                      <p className="text-xs text-muted-foreground mb-1">Mobile Contact</p>
+                      <p className="text-sm font-bold text-accent flex items-center gap-2">
                         <Phone className="h-4 w-4" />
-                        {appointment.userPhone}
+                        {user?.role === 'company'
+                          ? appointment.user_profile?.phone
+                          : appointment.company_profile?.phone}
                       </p>
                     </div>
                     <div className="p-3 bg-muted/50 rounded-lg">
-                      <p className="text-xs text-muted-foreground mb-1">Notes</p>
-                      <p className="text-sm text-foreground">{appointment.notes}</p>
+                      <p className="text-xs text-muted-foreground mb-1">Description</p>
+                      <p className="text-sm text-foreground">{appointment.description}</p>
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    {appointment.status === 'pending' && (
-                      <>
-                        <Button variant="accent" className="flex-1">
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Confirm
-                        </Button>
-                        <Button variant="outline" className="flex-1">
-                          Reschedule
-                        </Button>
-                        <Button variant="ghost">
-                          <XCircle className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
-                    {appointment.status === 'confirmed' && (
-                      <>
-                        <Button variant="accent" className="flex-1">
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Start Service
-                        </Button>
-                        <Button variant="outline" className="flex-1">
-                          <Phone className="h-4 w-4 mr-2" />
-                          Call Client
-                        </Button>
-                      </>
-                    )}
                   </div>
                 </motion.div>
               )}
             </motion.div>
           ))}
 
-          {demoAppointments.length === 0 && (
+          {filteredAppointments.length === 0 && appointments.length > 0 && (
+            <div className="glass-card rounded-xl p-8 text-center bg-muted/20 border-dashed">
+              <p className="text-muted-foreground">No appointments for this specific date</p>
+            </div>
+          )}
+
+          {appointments.length === 0 && (
             <div className="glass-card rounded-xl p-12 text-center">
-              <CalendarIcon className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-              <p className="text-muted-foreground">No appointments scheduled</p>
-              <Button variant="accent" className="mt-4">
-                <Plus className="h-4 w-4 mr-2" />
-                Schedule Appointment
-              </Button>
+              <Waves className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="text-muted-foreground">No appointments or requests found</p>
+              {user?.role === 'normal' && (
+                <Button variant="accent" className="mt-4" onClick={() => window.location.href = '/dashboard/map'}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Request First Service
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -231,3 +275,4 @@ export const AppointmentsPage = () => {
     </div>
   );
 };
+
