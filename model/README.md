@@ -24,25 +24,43 @@ The preprocessing now follows the official MIMII baseline logic more closely, en
 
 ## 🚀 How to Run the Backend
 
-### Step 1: Install Dependencies
-Open your terminal in `d:/test/Model/server` and run:
-```bash
+### Step 1: Set up a Virtual Environment (Recommended)
+This prevents "externally-managed-environment" or "ModuleNotFoundError" when using different Python versions.
+
+Open your terminal in `model/server/` and run:
+```powershell
+python -m venv venv
+.\venv\Scripts\activate
+```
+*(On Linux/macOS: `source venv/bin/activate`)*
+
+### Step 2: Install Dependencies
+```powershell
 pip install -r requirements.txt
 ```
 
-### Step 2: Start the Server
-```bash
+### Step 3: Start the Server
+From the `model/server/` directory:
+```powershell
 python main.py
 ```
+The server will start at **[http://localhost:8000](http://localhost:8000)**.
 
-### Step 3: Test an Analysis
-You can now test the analysis by specifying a machine ID (e.g., 04):
+### Step 4: Test An Analysis
+You can test the API by sending a POST request to analyze a sound file (e.g., machine ID 04):
 `POST http://localhost:8000/analyze?machine_id=04`
+
+---
+### 💡 Troubleshooting
+*   **ModuleNotFoundError**: Ensure you have activated the `venv` as shown in Step 1.
+*   **OneDNN Warnings**: These are normal for TensorFlow and can be ignored.
+*   **Port 8000 in use**: If you see "address already in use", another instance of the server might be running. Close existing terminals and try again.
+
 
 ## ⚙️ Key File Changes
 
-- [main.py](file:///d:/test/Model/server/main.py): Added query param support and refined file handling.
-- [inference.py](file:///d:/test/Model/server/inference.py): Implemented a model registry and standardized preprocessing.
+- [main.py](server/main.py): Added query param support and refined file handling.
+- [inference.py](server/inference.py): Implemented a model registry and standardized preprocessing.
 
 > [!WARNING]
 > Please ensure that all  `.h5` models in `assets/` are trained with the same architecture (e.g., Dense Autoencoder with 320 inputs). If some are Convolutional (128x128), you will need to standardize them to one architecture.
