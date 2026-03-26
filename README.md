@@ -24,4 +24,4 @@ Currently prototyped for **laptop cooling fans, server fans, engine fans**, this
 * **Database:** SQLite / PostgreSQL
 
 ---
-*Developed by [Invictus] - Faculty of Engineering, University of Peradeniya.*
+*Developed by [Invictus-Team29] - Faculty of Engineering, University of Peradeniya.*
