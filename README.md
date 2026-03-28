@@ -1,4 +1,7 @@
-# PERA-SAM 🎧🔧
+<p algin ="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:3a8296,100:091519&height=150&text=PERA%20-SAM%20🎧🔧&fontSize=50&fontColor=61DAFB&fontAlignY=30&animation=twinkling&section=header" />
+</p>
+
 ### AI Sound Analyst & Health Manager for Industrial Assets
 
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue) ![Librosa](https://img.shields.io/badge/Audio_Analysis-Librosa-orange) ![Status](https://img.shields.io/badge/Status-Prototype-green)
