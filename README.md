@@ -28,3 +28,7 @@ Currently prototyped for **laptop cooling fans, server fans, engine fans**, this
 
 ---
 *Developed by [Invictus-Team29] - Faculty of Engineering, University of Peradeniya.*
+
+<p align="center">
+     <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&height=100&section=footer"/>
+</p>
