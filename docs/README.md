@@ -19,7 +19,10 @@ If your followed all the given instructions correctly, your repository will be a
 
 A HTML template integrated with the given GitHub repository templates, based on github.com/cepdnaclk/eYY-project-theme . If you like to remove this default theme and make your own web page, you can remove the file, docs/_config.yml and create the site using HTML. -->
 
-# PERA-SAM 🔧
+<p algin ="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:3a8296,100:091519&height=150&text=PERA%20-SAM%20🎧🔧&fontSize=50&fontColor=61DAFB&fontAlignY=30&animation=twinkling&section=header" />
+</p>
+
 ### 🩺 AI Sound Analyst & Health Manager for Industrial Assets
 
 ---
