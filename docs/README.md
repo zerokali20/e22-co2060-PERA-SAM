@@ -24,7 +24,7 @@ A HTML template integrated with the given GitHub repository templates, based on 
 </p>
 
 
-# 🩺 AI Sound Analyst & Health Manager for Industrial Assets
+## 🩺 AI Sound Analyst & Health Manager for Industrial Assets
 
 ---
 
