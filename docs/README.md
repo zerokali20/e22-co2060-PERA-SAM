@@ -57,6 +57,53 @@ Currently prototyped for laptop cooling fans, server fans, engine fans, this sys
 
 ## Solution Architecture
 
+
+```mermaid
+graph LR
+    A["mimii_baseline<br/>(Research Lab)"] -->|"dataset + pickle"| B["Model/server<br/>(ML Backend API)"]
+    B -->|"REST API :8000"| C["pera-sam<br/>(Frontend Web App)"]
+    C -->|"Supabase Auth"| D["Supabase Cloud<br/>(User DB + Auth)"]
+```
+| Folder | Role | Tech Stack |
+|--------|------|------------|
+| `mimii_baseline/` | Original Hitachi research code + raw dataset storage | Python, Keras, librosa |
+| `model/server/` | Production ML API — trains models, serves predictions | Python, FastAPI, TensorFlow, uvicorn |
+| `pera-sam/` | Web dashboard — user login, upload audio, view results | React, Vite, TypeScript, TailwindCSS, Supabase |
+
+>### Step-by-Step: What happens when run the system
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend as pera-sam<br/>(React :5173)
+    participant Backend as Model/server<br/>(FastAPI :8000)
+    participant Dataset as mimii_baseline/<br/>dataset/
+    participant Supabase as Supabase Cloud
+
+    Note over Backend: SERVER STARTUP
+    Backend->>Dataset: 1. Scan dataset folder for machine IDs
+    Backend->>Backend: 2. Check if .h5 models exist in assets/
+    alt Models missing
+        Backend->>Dataset: 3. Read normal/*.wav files
+        Backend->>Backend: 4. Extract mel-spectrograms → pickle cache
+        Backend->>Backend: 5. Train autoencoder (50 epochs)
+        Backend->>Backend: 6. Calibrate threshold (normal vs abnormal)
+        Backend->>Backend: 7. Save model.h5 + metrics.yaml → assets/
+    end
+    Backend->>Backend: 8. Load all .h5 models into memory
+
+    Note over User: USER INTERACTION
+    User->>Frontend: 9. Open browser → Landing Page
+    Frontend->>Supabase: 10. Login / Register (auth)
+    Supabase-->>Frontend: JWT token
+    User->>Frontend: 11. Go to Analysis page → upload .wav
+    Frontend->>Backend: 12. POST /analyze (audio file)
+    Backend->>Backend: 13. Preprocess audio → mel-spectrogram
+    Backend->>Backend: 14. Auto-detect machine ID (lowest MSE)
+    Backend->>Backend: 15. Compare score vs calibrated threshold
+    Backend-->>Frontend: 16. JSON result (Normal/Warning/Anomaly)
+    Frontend->>User: 17. Display health score, recommendation
+```
 <!--High level diagram + description -->
 
 ## Software Designs
