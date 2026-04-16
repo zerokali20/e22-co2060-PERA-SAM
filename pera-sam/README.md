@@ -29,7 +29,7 @@ PERA-SAM is a professional machine learning-powered acoustic analysis platform d
 1. **Clone the repository**:
    ```sh
    git clone <repository-url>
-   cd PERA-SAM-TEST
+   cd pera-sam
    ```
 
 2. **Frontend Setup**:
@@ -41,7 +41,7 @@ PERA-SAM is a professional machine learning-powered acoustic analysis platform d
 3. **Backend Setup**:
    Navigate to the `Model/server` directory and install dependencies:
    ```sh
-   cd ../Model/server
+   cd ../model/server
    pip install -r requirements.txt
    uvicorn main:app --reload
    ```
