@@ -31,14 +31,14 @@ Currently prototyped for **laptop cooling fans, server fans, engine fans**, this
 ```mermaid
 graph LR
     A["mimii_baseline<br/>(Research Lab)"] -->|"dataset + pickle"| B["Model/server<br/>(ML Backend API)"]
-    B -->|"REST API :8000"| C["PERA-SAM-TEST<br/>(Frontend Web App)"]
+    B -->|"REST API :8000"| C["pera-sam<br/>(Frontend Web App)"]
     C -->|"Supabase Auth"| D["Supabase Cloud<br/>(User DB + Auth)"]
 ```
 | Folder | Role | Tech Stack |
 |--------|------|------------|
 | `mimii_baseline/` | Original Hitachi research code + raw dataset storage | Python, Keras, librosa |
 | `Model/server/` | Production ML API — trains models, serves predictions | Python, FastAPI, TensorFlow, uvicorn |
-| `PERA-SAM-TEST/` | Web dashboard — user login, upload audio, view results | React, Vite, TypeScript, TailwindCSS, Supabase |
+| `pera-sam/` | Web dashboard — user login, upload audio, view results | React, Vite, TypeScript, TailwindCSS, Supabase |
 
 
 > ## 2. Complete System Workflow
@@ -48,7 +48,7 @@ graph LR
 ```mermaid
 sequenceDiagram
     participant User
-    participant Frontend as PERA-SAM-TEST<br/>(React :5173)
+    participant Frontend as pera-sam<br/>(React :5173)
     participant Backend as Model/server<br/>(FastAPI :8000)
     participant Dataset as mimii_baseline/<br/>dataset/
     participant Supabase as Supabase Cloud
