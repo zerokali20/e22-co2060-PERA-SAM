@@ -1,7 +1,4 @@
-README
-======
-
-Quick setup instructions to install project dependencies locally.
+## Quick setup instructions to install project dependencies locally.
 
 Windows (PowerShell)
 --------------------
@@ -121,25 +118,3 @@ fan_id_06_6dB:
   ...
 ```
 
-## Dependency
-
-We develop the source code on Ubuntu 16.04 LTS and 18.04 LTS.
-In addition, we checked performing on **Ubuntu 16.04 LTS**, **18.04 LTS**, **Cent OS 7**, and **Windows 10**.
-
-### Software packages
-- p7zip-full
-- Python == 3.6.5
-- FFmpeg
-
-### Python packages
-- Keras                         == 2.1.6
-- Keras-Applications            == 1.0.8
-- Keras-Preprocessing           == 1.0.5
-- matplotlib                    == 3.0.3
-- numpy                         == 1.16.0
-- PyYAML                        == 5.1
-- scikit-learn                  == 0.20.2
-- librosa                       == 0.6.0
-- audioread                     == 2.1.5 (more)
-- setuptools                    == 41.0.0
-- tensorflow                    == 1.15.0
