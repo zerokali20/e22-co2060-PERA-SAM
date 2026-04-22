@@ -58,4 +58,4 @@ The frontend will be available at `http://localhost:8080` and the backend at `ht
 
 ## License
 
-All rights reserved. Professional use only.
+All rights reserved. Professional use only. Copyright (c) 2026 Team Invictus.
