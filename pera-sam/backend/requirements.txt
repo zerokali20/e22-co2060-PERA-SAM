@@ -5,7 +5,7 @@ librosa==0.10.2
 numpy==1.26.4
 # tensorflow-cpu: CPU-only build (~200MB vs 620MB for full tensorflow)
 # Sufficient for autoencoder inference — no GPU required
-tensorflow==2.17.0
+tensorflow-cpu==2.17.1
 PyYAML==6.0.2
 scikit-learn==1.5.2
 tqdm==4.66.5

@@ -5,7 +5,7 @@ echo =============================================
 echo.
 
 :: Path relative to this .bat file (now in Model root)
-set VENV_PYTHON=%~dp0.venv\Scripts\python.exe
+set VENV_PYTHON=%~dp0.venv\bin\python.exe
 set MAIN_PY=%~dp0server\main.py
 
 :: Check venv exists
@@ -13,7 +13,7 @@ if not exist "%VENV_PYTHON%" (
     echo [ERROR] Virtual environment not found at %VENV_PYTHON%
     echo Run this first to set it up:
     echo   python -m venv .venv
-    echo   .venv\Scripts\python.exe -m pip install -r server\requirements.txt
+    echo   .venv\bin\python.exe -m pip install -r server\requirements.txt
     pause
     exit /b 1
 )
