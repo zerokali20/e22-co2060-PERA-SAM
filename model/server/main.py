@@ -106,7 +106,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://red-mushroom-094aece00.7.azurestaticapps.net"],
+    allow_origins=["https://proud-glacier-05c9fb600.7.azurestaticapps.net"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
