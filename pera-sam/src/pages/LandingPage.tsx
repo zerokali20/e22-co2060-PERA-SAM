@@ -411,7 +411,7 @@ export const LandingPage = () => {
             {[
               {
                 name: 'Mr. Bhagya Karunanayake',
-                role: 'CEO / Project Owner',
+                role: 'Project Owner',
                 image: ceoImg,
                 regNo: 'E/22/184',
                 links: { github: 'https://github.com/zerokali20', linkedin: 'https://www.linkedin.com/in/bhagya-karunanayake-b52085270/', email: 'e22184@eng.pdn.ac.lk', portfolio: 'https://www.thecn.com/KK1842' }
