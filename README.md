@@ -43,7 +43,7 @@ graph LR
 
 > ## 2. Complete System Workflow
 
-### Step-by-Step: What happens when run the system
+### Step-by-Step: What happens when you run the system
 
 ```mermaid
 sequenceDiagram
