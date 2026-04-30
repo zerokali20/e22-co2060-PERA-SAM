@@ -1,4 +1,4 @@
-### Prerequisites
+## Prerequisites
 Before running the baseline code, ensure you have the following installed on your system:
 * **Python:** Version 3.8 to 3.10 is highly recommended for compatibility with the required Machine Learning libraries (TensorFlow/Keras).
 * **Pip:** Python's package installer.
