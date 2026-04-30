@@ -117,6 +117,16 @@ The client application follows a strict **Component-Based Architecture** and uti
 *   **Container/Presenter Pattern:** Data fetching and asynchronous state management are completely decoupled from UI rendering using `@tanstack/react-query`. It handles the "Container" logic (caching, loading states, error handling), allowing the UI components to remain pure "Presenters."
 *   **Wrapper Components (HOCs):** Security and routing are handled via wrapper components. For example, the `<ProtectedRoute>` component wraps dashboard routes, automatically redirecting unauthenticated users before the route even mounts.
 
+### 2. Backend Design Patterns (Python & FastAPI)
+The backend ML API is highly modularized, strictly separating the heavy Machine Learning logic from the HTTP routing layer.
+
+*   **Modular Separation of Concerns:** 
+    *   `main.py`: Handles the HTTP lifecycle, API routing, and CORS middleware.
+    *   `trainer.py`: Encapsulates all logic for loading datasets, extracting features, and training models.
+    *   `inference.py`: Contains the `SoundAnalyzer` logic dedicated purely to predicting anomalies.
+*   **Singleton Pattern (Model Loading):** Machine learning models (`.h5` files) are large and slow to load. The `SoundAnalyzer` acts as a Singleton during the FastAPI `lifespan`. Models are loaded into memory *once* at server startup, enabling extremely fast, sub-second responses for subsequent `/analyze` requests.
+
+
 
 
 
