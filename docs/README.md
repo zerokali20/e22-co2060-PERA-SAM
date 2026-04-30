@@ -72,39 +72,8 @@ graph LR
 | `pera-sam/` | Web dashboard — user login, upload audio, view results | React, Vite, TypeScript, TailwindCSS, Supabase |
 
 >### Step-by-Step: What happens when run the system
+<img width="970" height="959" alt="image" src="https://github.com/user-attachments/assets/59f0e80b-5309-4bbb-b9c6-727026f9b887" />
 
-```mermaid
-sequenceDiagram
-    participant User
-    participant Frontend as "pera-sam<br/>(React :5173)"
-    participant Backend as "Model/server<br/>(FastAPI :8000)"
-    participant Dataset as "mimii_baseline/<br/>dataset/"
-    participant Supabase as "Supabase Cloud"
-
-    Note over Backend: SERVER STARTUP
-    Backend->>Dataset: 1. Scan dataset folder for machine IDs
-    Backend->>Backend: 2. Check if .h5 models exist in assets/
-    alt Models missing
-        Backend->>Dataset: 3. Read normal/*.wav files
-        Backend->>Backend: 4. Extract mel-spectrograms → pickle cache
-        Backend->>Backend: 5. Train autoencoder (50 epochs)
-        Backend->>Backend: 6. Calibrate threshold (normal vs abnormal)
-        Backend->>Backend: 7. Save model.h5 + metrics.yaml → assets/
-    end
-    Backend->>Backend: 8. Load all .h5 models into memory
-
-    Note over User: USER INTERACTION
-    User->>Frontend: 9. Open browser → Landing Page
-    Frontend->>Supabase: 10. Login / Register (auth)
-    Supabase-->>Frontend: JWT token
-    User->>Frontend: 11. Go to Analysis page → upload .wav
-    Frontend->>Backend: 12. POST /analyze (audio file)
-    Backend->>Backend: 13. Preprocess audio → mel-spectrogram
-    Backend->>Backend: 14. Auto-detect machine ID (lowest MSE)
-    Backend->>Backend: 15. Compare score vs calibrated threshold
-    Backend-->>Frontend: 16. JSON result (Normal/Warning/Anomaly)
-    Frontend->>User: 17. Display health score, recommendation
-```
 
 
 ## 🎨 Software Design
