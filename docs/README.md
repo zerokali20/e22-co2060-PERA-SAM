@@ -76,10 +76,10 @@ graph LR
 ```mermaid
 sequenceDiagram
     participant User
-    participant Frontend as pera-sam<br/>(React :5173)
-    participant Backend as Model/server<br/>(FastAPI :8000)
-    participant Dataset as mimii_baseline/<br/>dataset/
-    participant Supabase as Supabase Cloud
+    participant Frontend as "pera-sam<br/>(React :5173)"
+    participant Backend as "Model/server<br/>(FastAPI :8000)"
+    participant Dataset as "mimii_baseline/<br/>dataset/"
+    participant Supabase as "Supabase Cloud"
 
     Note over Backend: SERVER STARTUP
     Backend->>Dataset: 1. Scan dataset folder for machine IDs
@@ -105,7 +105,7 @@ sequenceDiagram
     Backend-->>Frontend: 16. JSON result (Normal/Warning/Anomaly)
     Frontend->>User: 17. Display health score, recommendation
 ```
-<!--High level diagram + description -->
+
 
 ## 🎨 Software Design
 
