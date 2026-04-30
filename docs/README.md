@@ -107,7 +107,16 @@ sequenceDiagram
 ```
 <!--High level diagram + description -->
 
-## Software Designs
+## 🎨 Software Design
+
+### 1. Frontend Design Patterns (React & TypeScript)
+The client application follows a strict **Component-Based Architecture** and utilizes several React-specific design patterns to ensure the UI is maintainable and scalable.
+
+*   **Atomic Design Principles:** UI elements are built using foundational, reusable primitive components (via Radix UI / Shadcn). These atomic components (like buttons and inputs) are combined into more complex organisms (like the `UploadForm` and `DashboardLayout`).
+*   **Provider Pattern:** Global state, such as User Authentication and Theme Settings, is injected into the component tree using React Context (`AuthProvider`, `ThemeProvider`). This prevents prop-drilling across deeply nested pages.
+*   **Container/Presenter Pattern:** Data fetching and asynchronous state management are completely decoupled from UI rendering using `@tanstack/react-query`. It handles the "Container" logic (caching, loading states, error handling), allowing the UI components to remain pure "Presenters."
+*   **Wrapper Components (HOCs):** Security and routing are handled via wrapper components. For example, the `<ProtectedRoute>` component wraps dashboard routes, automatically redirecting unauthenticated users before the route even mounts.
+
 
 
 
