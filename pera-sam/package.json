@@ -1,7 +1,9 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "pera-sam-frontend",
+  "description": "Predictive Equipment Reliability & Acoustics Web Dashboard",
+  "author": "Invictus-Team29",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
