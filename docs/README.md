@@ -58,13 +58,9 @@ Currently prototyped for laptop cooling fans, server fans, engine fans, this sys
 
 ## Solution Architecture
 
+<img width="978" height="95" alt="image" src="https://github.com/user-attachments/assets/c03a0a87-2f82-4012-aa4e-4578de1de60f" />
 
-```mermaid
-graph LR
-    A["mimii_baseline<br/>(Research Lab)"] -->|"dataset + pickle"| B["Model/server<br/>(ML Backend API)"]
-    B -->|"REST API :8000"| C["pera-sam<br/>(Frontend Web App)"]
-    C -->|"Supabase Auth"| D["Supabase Cloud<br/>(User DB + Auth)"]
-```
+
 | Folder | Role | Tech Stack |
 |--------|------|------------|
 | `mimii_baseline/` | Original Hitachi research code + raw dataset storage | Python, Keras, librosa |
