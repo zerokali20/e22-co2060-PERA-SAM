@@ -1,3 +1,9 @@
+### Prerequisites
+Before running the baseline code, ensure you have the following installed on your system:
+* **Python:** Version 3.8 to 3.10 is highly recommended for compatibility with the required Machine Learning libraries (TensorFlow/Keras).
+* **Pip:** Python's package installer.
+* **7-Zip:** Required if you plan to use the dataset extraction script on Windows (for extracting `.zip` files).
+
 ## Quick setup instructions to install project dependencies locally.
 
 Windows (PowerShell)
