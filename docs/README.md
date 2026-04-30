@@ -130,6 +130,8 @@ The backend ML API is highly modularized, strictly separating the heavy Machine 
 *   **Façade Pattern (API):** The `/analyze` API endpoint acts as a Façade. The client simply sends an audio file, completely unaware of the complex pipeline beneath (Librosa Mel-spectrogram extraction, MSE calculation, and threshold comparison).
 *   **Dynamic Thresholding:** Rather than hardcoding what constitutes an "anomaly," the system dynamically calculates thresholds based on the 90th percentile of reconstruction errors during training.
 *   **Auto-Initialization Strategy:** To ensure a smooth developer experience, the system implements an auto-bootstrap mechanism. If the server boots and detects no trained models, it automatically scans the raw dataset, extracts features, trains the autoencoders, and calibrates thresholds before opening the port for traffic.
+<img width="1401" height="481" alt="Untitled Diagram drawio (3)" src="https://github.com/user-attachments/assets/21f29925-884b-457f-b2fd-d5f1cd1b95ba" />
+
 
 
 
