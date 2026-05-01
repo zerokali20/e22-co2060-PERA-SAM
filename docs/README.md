@@ -113,6 +113,11 @@ The PERA-SAM application employs a comprehensive, multi-layered testing architec
 | **Frontend Unit** | Vitest | React Utilities | `npm run test` (in root) | Isolated testing of pure utility functions, hooks, and uncoupled logic. |
 | **Frontend Integration**| React Testing Library | UI Components | `npm run test` (in root) | DOM rendering, component interactions, and simulated user workflows. |
 | **API Endpoints** | Postman | Live Server | Postman Runner | Automated post-request assertions (status codes, timings, payloads). |
+### 3.1 Backend Testing (Pytest + FastAPI)
+The standard and most robust way to test the FastAPI backend is using `pytest` combined with `httpx` (using FastAPI's `TestClient`). This tests the API logic without needing a running server.
+* **Execution:** Navigate to the `model/` directory and run `python -m pytest tests/ -v`.
+* **Scope:** Tests logic, validation errors (e.g., handling missing file uploads), and python integration.
+
 
 
 
