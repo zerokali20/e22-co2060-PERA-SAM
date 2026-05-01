@@ -90,8 +90,8 @@ The backend ML API is highly modularized, strictly separating the heavy Machine 
     *   `trainer.py`: Encapsulates all logic for loading datasets, extracting features, and training models.
     *   `inference.py`: Contains the `SoundAnalyzer` logic dedicated purely to predicting anomalies.
 *   **Singleton Pattern (Model Loading):** Machine learning models (`.h5` files) are large and slow to load. The `SoundAnalyzer` acts as a Singleton during the FastAPI `lifespan`. Models are loaded into memory *once* at server startup, enabling extremely fast, sub-second responses for subsequent `/analyze` requests.
-### 3. API & Machine Learning Design Strategy
 
+### 3. API & Machine Learning Design Strategy
 *   **Façade Pattern (API):** The `/analyze` API endpoint acts as a Façade. The client simply sends an audio file, completely unaware of the complex pipeline beneath (Librosa Mel-spectrogram extraction, MSE calculation, and threshold comparison).
 *   **Dynamic Thresholding:** Rather than hardcoding what constitutes an "anomaly," the system dynamically calculates thresholds based on the 90th percentile of reconstruction errors during training.
 *   **Auto-Initialization Strategy:** To ensure a smooth developer experience, the system implements an auto-bootstrap mechanism. If the server boots and detects no trained models, it automatically scans the raw dataset, extracts features, trains the autoencoders, and calibrates thresholds before opening the port for traffic.
