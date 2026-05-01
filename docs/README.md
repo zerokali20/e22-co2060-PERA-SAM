@@ -118,6 +118,7 @@ The PERA-SAM application employs a comprehensive, multi-layered testing architec
 The standard and most robust way to test the FastAPI backend is using `pytest` combined with `httpx` (using FastAPI's `TestClient`). This tests the API logic without needing a running server.
 * **Execution:** Navigate to the `model/` directory and run `python -m pytest tests/ -v`.
 * **Scope:** Tests logic, validation errors (e.g., handling missing file uploads), and python integration.
+
 ### Frontend Unit Testing (Vitest)
 Vitest is configured for the frontend to handle pure utility functions, hooks, and logic uncoupled from the React UI.
 * **Execution:** Run `npm run test` or `npm run test:watch` in the frontend directory.
