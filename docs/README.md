@@ -105,6 +105,14 @@ The backend ML API is highly modularized, strictly separating the heavy Machine 
 
 
 ## Testing
+The PERA-SAM application employs a comprehensive, multi-layered testing architecture to ensure reliability across the frontend, backend, and API integrations. Our approach separates testing into distinct areas to maintain code quality without disrupting the production structure.
+### Testing Overview
+| Testing Phase | Framework/Tool | Target Scope | Execution / Location | Primary Focus |
+| :--- | :--- | :--- | :--- | :--- |
+| **Backend Testing** | Pytest + httpx | FastAPI Backend | `python -m pytest tests/ -v` (in `model/`) | API logic, validation errors, and Python integration via `TestClient`. |
+| **Frontend Unit** | Vitest | React Utilities | `npm run test` (in root) | Isolated testing of pure utility functions, hooks, and uncoupled logic. |
+| **Frontend Integration**| React Testing Library | UI Components | `npm run test` (in root) | DOM rendering, component interactions, and simulated user workflows. |
+| **API Endpoints** | Postman | Live Server | Postman Runner | Automated post-request assertions (status codes, timings, payloads). |
 
 
 
