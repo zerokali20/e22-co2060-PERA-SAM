@@ -124,7 +124,7 @@ Vitest is configured for the frontend to handle pure utility functions, hooks, a
 * **Execution:** Run `npm run test` or `npm run test:watch` in the frontend directory.
 * **Scope:** Tests standalone helper functions (e.g., formatting confidence scores) alongside the files they test (e.g., `utils.ts` -> `utils.test.ts`).
 
-###Frontend Integration Testing (React Testing Library)
+### Frontend Integration Testing (React Testing Library)
 Integration tests ensure that React components render correctly, interact with each other properly, and handle user events as expected.
 * **Execution:** Included in the standard `npm run test` command via jsdom environment.
 * **Scope:** Tests DOM rendering, simulated user workflows, and state changes (e.g., file upload component behavior and error messages).
