@@ -129,6 +129,13 @@ Integration tests ensure that React components render correctly, interact with e
 * **Execution:** Included in the standard `npm run test` command via jsdom environment.
 * **Scope:** Tests DOM rendering, simulated user workflows, and state changes (e.g., file upload component behavior and error messages).
 
+### API Endpoints Unit Testing (Postman)
+Postman allows writing JavaScript assertions that run after an API request completes, making it ideal for automating API endpoint testing.
+* **Execution:** Import the `PERA-SAM API Tests` collection into Postman, set the `base_url` environment variable (e.g., `http://localhost:8000`), and run the collection.
+* **Scope:** End-to-end integration test from the client's perspective to a live server, validating status codes, response times, and correct JSON payloads.
+
+
+
 
 
 
