@@ -143,6 +143,8 @@ Postman allows writing JavaScript assertions that run after an API request compl
 
 
 ## Conclusion
+**PERA-SAM** represents a significant shift in industrial maintenance—moving away from reactive repairs to intelligent, proactive monitoring. By successfully leveraging acoustic signatures and machine learning (Autoencoders, FFT, and MFCC), this system proves that we can accurately detect the subtle early warning signs of equipment degradation before a catastrophic failure occurs.
+While currently prototyped and validated on cooling fans and small-scale motors, the architecture is inherently scalable. The ultimate vision for PERA-SAM is to be deployed across heavy manufacturing facilities, automotive fleets, and large-scale industrial plants—serving as the continuous, automated "ears" for mission-critical infrastructure, reducing unexpected downtime, and saving significant maintenance costs.
 
 
 
