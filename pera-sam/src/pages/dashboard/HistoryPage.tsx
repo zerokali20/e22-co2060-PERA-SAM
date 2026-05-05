@@ -402,67 +402,132 @@ export const HistoryPage = () => {
         </div>
       </div>
 
-      {/* Summary stats */}
+      {/* Summary stats — click to filter */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: 'Total', value: totalCount, color: 'text-foreground', bg: 'bg-muted/40' },
-          { label: 'Normal', value: normalCount, color: 'text-emerald-400', bg: 'bg-emerald-500/5' },
-          { label: 'Warning', value: warningCount, color: 'text-amber-400', bg: 'bg-amber-500/5' },
-          { label: 'Abnormal', value: abnormalCount, color: 'text-rose-400', bg: 'bg-rose-500/5' },
-        ].map(s => (
-          <motion.div
-            key={s.label}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`${s.bg} glass-card rounded-xl p-5 border border-border/50`}
-          >
-            <p className={`text-3xl font-bold ${s.color}`}>{s.value}</p>
-            <p className="text-sm text-muted-foreground mt-0.5">{s.label}</p>
-          </motion.div>
-        ))}
+        {([
+          { label: 'Total',    value: totalCount,    filterKey: 'all'      as const, color: 'text-foreground',  bg: 'bg-muted/40',        ring: 'ring-foreground/30' },
+          { label: 'Normal',   value: normalCount,   filterKey: 'normal'   as const, color: 'text-emerald-400', bg: 'bg-emerald-500/5',    ring: 'ring-emerald-400/60' },
+          { label: 'Warning',  value: warningCount,  filterKey: 'warning'  as const, color: 'text-amber-400',   bg: 'bg-amber-500/5',      ring: 'ring-amber-400/60' },
+          { label: 'Abnormal', value: abnormalCount, filterKey: 'abnormal' as const, color: 'text-rose-400',    bg: 'bg-rose-500/5',       ring: 'ring-rose-400/60' },
+        ] as const).map((s, i) => {
+          const isActive = filterStatus === s.filterKey;
+          return (
+            <motion.button
+              key={s.label}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.06 }}
+              onClick={() => setFilterStatus(s.filterKey)}
+              className={`${s.bg} glass-card rounded-xl p-5 border text-left w-full transition-all duration-200 cursor-pointer
+                hover:scale-[1.03] active:scale-[0.98]
+                ${
+                  isActive
+                    ? `ring-2 ${s.ring} border-transparent shadow-lg`
+                    : 'border-border/50 hover:border-border'
+                }`}
+            >
+              <p className={`text-3xl font-bold ${s.color}`}>{s.value}</p>
+              <div className="flex items-center justify-between mt-0.5">
+                <p className="text-sm text-muted-foreground">{s.label}</p>
+                {isActive && (
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${s.color} bg-current/10`}
+                    style={{ backgroundColor: 'transparent', outline: '1px solid currentColor', outlineOffset: '-1px', opacity: 0.8 }}
+                  >
+                    Active
+                  </span>
+                )}
+              </div>
+            </motion.button>
+          );
+        })}
       </div>
 
       {/* Search & Filter */}
-      <div className="glass-card rounded-xl p-4 flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="flex flex-col sm:flex-row gap-3">
+        {/* Search bar */}
+        <div className="glass-card rounded-xl px-4 py-2 flex items-center gap-3 flex-1">
+          <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <input
             type="text"
             placeholder="Search by filename or category…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/40 transition"
+            className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground"
           />
+          {search && (
+            <button onClick={() => setSearch('')} className="text-muted-foreground hover:text-foreground transition">
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
-        <div className="relative">
+        {/* Filter dropdown — standalone so stacking context never clips it */}
+        <div className="relative flex-shrink-0">
           <button
             onClick={() => setShowFilter(v => !v)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-muted/50 border border-border rounded-lg text-sm text-foreground hover:bg-muted transition"
+            className={`flex items-center gap-2 px-4 py-2.5 border rounded-xl text-sm transition-all h-full ${
+              filterStatus !== 'all'
+                ? 'bg-accent/10 border-accent/40 text-accent font-semibold shadow-md'
+                : 'glass-card border-border/50 text-foreground hover:bg-muted'
+            }`}
           >
             <Filter className="h-4 w-4" />
-            {filterStatus === 'all' ? 'All Status' : filterStatus.charAt(0).toUpperCase() + filterStatus.slice(1)}
-            <ChevronDown className={`h-4 w-4 transition-transform ${showFilter ? 'rotate-180' : ''}`} />
+            <span>
+              {filterStatus === 'all'
+                ? 'All Status'
+                : filterStatus.charAt(0).toUpperCase() + filterStatus.slice(1)}
+            </span>
+            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showFilter ? 'rotate-180' : ''}`} />
           </button>
 
           <AnimatePresence>
             {showFilter && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                className="absolute right-0 top-full mt-1 z-20 glass-card border border-border rounded-xl overflow-hidden shadow-xl min-w-[160px]"
-              >
-                {(['all', 'normal', 'warning', 'abnormal'] as const).map(s => (
-                  <button
-                    key={s}
-                    onClick={() => { setFilterStatus(s); setShowFilter(false); }}
-                    className={`w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition ${filterStatus === s ? 'text-accent font-medium' : 'text-foreground'}`}
-                  >
-                    {s === 'all' ? 'All Status' : s.charAt(0).toUpperCase() + s.slice(1)}
-                  </button>
-                ))}
-              </motion.div>
+              <>
+                {/* click-outside overlay */}
+                <div
+                  className="fixed inset-0 z-[9998]"
+                  onClick={() => setShowFilter(false)}
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -6 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -6 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 top-full mt-2 z-[9999] bg-card border border-border rounded-xl shadow-2xl min-w-[190px] overflow-hidden"
+                  style={{ backdropFilter: 'blur(16px)' }}
+                >
+                  <div className="p-1">
+                    {([
+                      { key: 'all'      as const, label: 'All Status', dot: '',                count: analyses.length },
+                      { key: 'normal'   as const, label: 'Normal',     dot: 'bg-emerald-400',  count: analyses.filter(a => a.status === 'normal').length },
+                      { key: 'warning'  as const, label: 'Warning',    dot: 'bg-amber-400',    count: analyses.filter(a => a.status === 'warning').length },
+                      { key: 'abnormal' as const, label: 'Abnormal',   dot: 'bg-rose-400',     count: analyses.filter(a => a.status === 'abnormal').length },
+                    ]).map(s => (
+                      <button
+                        key={s.key}
+                        onClick={() => { setFilterStatus(s.key); setShowFilter(false); }}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-all ${
+                          filterStatus === s.key
+                            ? 'bg-accent/10 text-accent font-semibold'
+                            : 'text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        {s.dot
+                          ? <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${s.dot}`} />
+                          : <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 border-2 border-muted-foreground/40" />
+                        }
+                        <span className="flex-1 text-left">{s.label}</span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                          filterStatus === s.key ? 'bg-accent/20 text-accent' : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {s.count}
+                        </span>
+                        {filterStatus === s.key && <CheckCircle className="h-3.5 w-3.5 text-accent flex-shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              </>
             )}
           </AnimatePresence>
         </div>
