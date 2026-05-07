@@ -30,6 +30,8 @@ interface AuthContextType {
   register: (userData: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -212,6 +214,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   };
 
+  const resetPassword = async (email: string) => {
+    setIsLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setIsLoading(false);
+    if (error) throw error;
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    setIsLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setIsLoading(false);
+    if (error) throw error;
+  };
+
   const updateProfile = async (updates: Partial<User>) => {
     if (!supabaseUser) return;
 
@@ -250,6 +268,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       register,
       logout,
       updateProfile,
+      resetPassword,
+      updatePassword,
       isAuthenticated: !!user
     }}>
       {children}
