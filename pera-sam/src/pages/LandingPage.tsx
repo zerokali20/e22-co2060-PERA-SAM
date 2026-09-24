@@ -556,9 +556,15 @@ export const LandingPage = () => {
                   <ChevronRight className="h-5 w-5" />
                 </Button>
               </Link>
-              <Button variant="outline" size="xl">
-                <Play className="h-5 w-5" />
-                Watch Demo
+              <Button variant="outline" size="xl" asChild>
+                <a
+                  href="https://drive.google.com/file/d/115XkjkcbfiJEPDoLzDeLv9QGnb97u7YW/view?usp=drive_link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Play className="h-5 w-5" />
+                  Watch Demo
+                </a>
               </Button>
             </div>
           </motion.div>
