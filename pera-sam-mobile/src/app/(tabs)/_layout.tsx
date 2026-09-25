@@ -11,6 +11,7 @@ import { BrandColors } from '../../constants/theme';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { useThemeContext } from '../../lib/ThemeContext';
+import { useLanguage } from '../../lib/LanguageContext';
 import { supabase } from '../../lib/supabase';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -135,6 +136,7 @@ function AnimatedTabIcon({
 export default function TabLayout() {
   const { user } = useAuth();
   const { isDark } = useThemeContext();
+  const { t } = useLanguage();
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Fetch unread request messages count
@@ -194,24 +196,28 @@ export default function TabLayout() {
         tabBarItemStyle: styles.tabItem,
       }}
     >
-      {TAB_ITEMS.map((tab) => (
-        <Tabs.Screen
-          key={tab.name}
-          name={tab.name}
-          options={{
-            title: tab.title,
-            tabBarActiveTintColor: tab.activeColor,
-            tabBarIcon: ({ focused, color }) => (
-              <AnimatedTabIcon
-                focused={focused}
-                color={color}
-                tab={tab}
-                unreadCount={unreadCount}
-              />
-            ),
-          }}
-        />
-      ))}
+      {TAB_ITEMS.map((tab) => {
+        const tabKey = tab.name === 'dashboard' ? 'tab.home' : `tab.${tab.name}`;
+        const tabTitle = t(tabKey, tab.title);
+        return (
+          <Tabs.Screen
+            key={tab.name}
+            name={tab.name}
+            options={{
+              title: tabTitle,
+              tabBarActiveTintColor: tab.activeColor,
+              tabBarIcon: ({ focused, color }) => (
+                <AnimatedTabIcon
+                  focused={focused}
+                  color={color}
+                  tab={{ ...tab, title: tabTitle }}
+                  unreadCount={unreadCount}
+                />
+              ),
+            }}
+          />
+        );
+      })}
       {/* Hidden tabs — still routable but not shown in tab bar */}
       {HIDDEN_TABS.map((name) => (
         <Tabs.Screen

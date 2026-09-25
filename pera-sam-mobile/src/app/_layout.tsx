@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../lib/AuthContext';
 import { ThemeProvider, useThemeContext } from '../lib/ThemeContext';
+import { LanguageProvider } from '../lib/LanguageContext';
 
 function RootNavigator() {
   const { session, loading } = useAuth();
@@ -51,10 +52,13 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <RootNavigator />
-      </AuthProvider>
-    </ThemeProvider>
+    <LanguageProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <RootNavigator />
+        </AuthProvider>
+      </ThemeProvider>
+    </LanguageProvider>
   );
 }
+

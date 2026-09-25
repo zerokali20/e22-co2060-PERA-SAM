@@ -22,6 +22,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../lib/AuthContext';
 import { useThemeContext } from '../lib/ThemeContext';
+import { useLanguage } from '../lib/LanguageContext';
 import { supabase } from '../lib/supabase';
 import {
   BrandColors,
@@ -64,10 +65,15 @@ function formatDateStr(d: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+// Helper to validate UUID
+const isUuid = (str?: string) =>
+  !!str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function ChatScreen() {
   const { user } = useAuth();
   const { colors, isDark } = useThemeContext();
+  const { t } = useLanguage();
   const params = useLocalSearchParams<{
     requestId: string;
     isCompany: string;
@@ -107,6 +113,26 @@ export default function ChatScreen() {
   // ── Fetch messages ─────────────────────────────────────────────────────
   const fetchMessages = useCallback(async () => {
     if (!requestId) return;
+
+    const isDemo = !isUuid(requestId) || !isUuid(user?.id);
+    if (isDemo) {
+      setLoading(false);
+      setMessages((prev) => {
+        if (prev.length > 0) return prev;
+        return [
+          {
+            id: 'demo-welcome-1',
+            request_id: requestId,
+            sender_id: 'provider',
+            content: `Hello! Thanks for reaching out to ${otherPartyName}. How can we assist you with your equipment today?`,
+            is_read: true,
+            created_at: new Date().toISOString(),
+          },
+        ];
+      });
+      return;
+    }
+
     try {
       const { data, error } = await (supabase as any)
         .from('request_messages')
@@ -131,12 +157,12 @@ export default function ChatScreen() {
     } finally {
       setLoading(false);
     }
-  }, [requestId, user]);
+  }, [requestId, user, otherPartyName]);
 
   useEffect(() => {
     fetchMessages();
 
-    if (!requestId) return;
+    if (!requestId || !isUuid(requestId) || !isUuid(user?.id)) return;
 
     // Real-time subscription for new messages
     const channel = supabase
@@ -209,6 +235,9 @@ export default function ChatScreen() {
 
   // ── Upload an image to storage or fallback ────────────────────────────
   const uploadImageUri = async (uri: string): Promise<string> => {
+    if (!isUuid(requestId) || !isUuid(user?.id)) {
+      return uri;
+    }
     try {
       const ext = uri.split('.').pop() || 'jpg';
       const filename = `chat_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
@@ -257,6 +286,26 @@ export default function ChatScreen() {
     };
 
     setMessages((prev) => [...prev, optimisticMsg]);
+
+    const isDemo = !isUuid(requestId) || !isUuid(user.id);
+    if (isDemo) {
+      if (!isCompany) {
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `reply-${Date.now()}`,
+              request_id: requestId,
+              sender_id: 'provider',
+              content: `Thank you for reaching out! Our service team at ${otherPartyName} has received your inquiry and will be in touch shortly.`,
+              is_read: true,
+              created_at: new Date().toISOString(),
+            },
+          ]);
+        }, 1000);
+      }
+      return;
+    }
 
     try {
       const { data, error } = await (supabase as any)
@@ -359,15 +408,19 @@ export default function ChatScreen() {
     setConfirmingSaving(true);
     try {
       const finalSlot = confirmedTimeInput.trim() || '09:00 AM - 12:00 PM';
-      // 1. Save to repair_requests table and sync calendar
-      const saveRes = await saveApprovedAppointment(
-        requestId,
-        confirmedDateInput.trim(),
-        finalSlot
-      );
+      const isDemo = !isUuid(requestId) || !isUuid(user?.id);
 
-      if (!saveRes.success) {
-        throw new Error(saveRes.error);
+      if (!isDemo) {
+        // 1. Save to repair_requests table and sync calendar
+        const saveRes = await saveApprovedAppointment(
+          requestId,
+          confirmedDateInput.trim(),
+          finalSlot
+        );
+
+        if (!saveRes.success) {
+          throw new Error(saveRes.error);
+        }
       }
 
       // 2. Broadcast confirmed proposal message into chat
@@ -680,7 +733,7 @@ export default function ChatScreen() {
           <View style={[styles.inputWrap, { backgroundColor: colors.background, borderColor: colors.border }]}>
             <TextInput
               style={[styles.textInput, { color: colors.foreground }]}
-              placeholder="Type a message or issue..."
+              placeholder={`${t('requests.chat')}...`}
               placeholderTextColor={colors.mutedForeground}
               value={newMessage}
               onChangeText={setNewMessage}

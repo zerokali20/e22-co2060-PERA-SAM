@@ -37,13 +37,7 @@ export function ThemeToggle({ size = 20 }: ThemeToggleProps) {
 
   return (
     <TouchableOpacity
-      style={[
-        styles.btn,
-        {
-          backgroundColor: isDark ? '#1e293b' : BrandColors.muted,
-          borderColor: isDark ? '#334155' : BrandColors.border,
-        },
-      ]}
+      style={styles.btn}
       onPress={handlePress}
       activeOpacity={0.7}
       accessibilityLabel={`Switch to ${isDark ? 'light' : 'dark'} mode`}
@@ -61,11 +55,9 @@ export function ThemeToggle({ size = 20 }: ThemeToggleProps) {
 
 const styles = StyleSheet.create({
   btn: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+    padding: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
   },
 });
+

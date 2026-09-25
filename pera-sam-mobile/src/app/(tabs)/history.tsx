@@ -16,6 +16,7 @@ import Animated, { FadeInRight, FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../lib/AuthContext';
 import { useThemeContext } from '../../lib/ThemeContext';
+import { useLanguage } from '../../lib/LanguageContext';
 import { supabase } from '../../lib/supabase';
 import {
   BrandColors,
@@ -49,6 +50,7 @@ interface AnalysisRecord {
 export default function HistoryScreen() {
   const { user } = useAuth();
   const { colors } = useThemeContext();
+  const { t } = useLanguage();
   const [records, setRecords] = useState<AnalysisRecord[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<AnalysisRecord | null>(null);
@@ -119,7 +121,9 @@ export default function HistoryScreen() {
               </View>
               <View style={[styles.badge, { backgroundColor: cfg.bg }]}>
                 <Ionicons name={cfg.icon as any} size={14} color={cfg.color} />
-                <Text style={[styles.badgeText, { color: cfg.color }]}>{cfg.label}</Text>
+                <Text style={[styles.badgeText, { color: cfg.color }]}>
+                  {t(`dashboard.${item.status}`, cfg.label)}
+                </Text>
               </View>
             </View>
 
@@ -168,12 +172,12 @@ export default function HistoryScreen() {
           <View style={styles.headerIconBg}>
             <Ionicons name="time" size={18} color={BrandColors.white} />
           </View>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>History</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>{t('tab.history')}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <ThemeToggle />
           <View style={styles.headerCountBadge}>
-            <Text style={styles.headerCount}>{records.length} records</Text>
+            <Text style={styles.headerCount}>{records.length}</Text>
           </View>
         </View>
       </Animated.View>
@@ -184,7 +188,7 @@ export default function HistoryScreen() {
           <Ionicons name="search-outline" size={18} color={BrandColors.indigo} />
           <TextInput
             style={[styles.searchInput, { color: colors.foreground }]}
-            placeholder="Search by category or machine..."
+            placeholder={t('common.search')}
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -222,7 +226,7 @@ export default function HistoryScreen() {
                   selectedFilter === f.id && styles.filterChipTextActive,
                 ]}
               >
-                {f.label}
+                {t(`dashboard.${f.id}`, f.label)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -251,7 +255,7 @@ export default function HistoryScreen() {
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
                 {searchQuery || selectedFilter !== 'all'
                   ? 'No matching results'
-                  : 'No history yet'}
+                  : t('dashboard.noActivity')}
               </Text>
               <Text style={[styles.emptyDesc, { color: colors.mutedForeground }]}>
                 {searchQuery || selectedFilter !== 'all'
@@ -279,7 +283,7 @@ export default function HistoryScreen() {
                   {/* Modal header */}
                   <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
                   <View style={styles.modalHeader}>
-                    <Text style={[styles.modalTitle, { color: colors.foreground }]}>Analysis Details</Text>
+                    <Text style={[styles.modalTitle, { color: colors.foreground }]}>{t('dashboard.detail.title', 'Analysis Details')}</Text>
                     <TouchableOpacity onPress={() => setSelectedRecord(null)}>
                       <Ionicons name="close-circle" size={28} color={colors.mutedForeground} />
                     </TouchableOpacity>
@@ -290,18 +294,18 @@ export default function HistoryScreen() {
                     <View style={[styles.modalHeroIcon, { backgroundColor: cfg.color }]}>
                       <Ionicons name={cfg.icon as any} size={24} color={BrandColors.white} />
                     </View>
-                    <Text style={[styles.modalStatus, { color: cfg.color }]}>{cfg.label}</Text>
+                    <Text style={[styles.modalStatus, { color: cfg.color }]}>{t(`dashboard.${selectedRecord.status}`, cfg.label)}</Text>
                   </View>
 
                   {/* Details grid */}
                   <View style={[styles.detailGrid, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <DetailRow label="Category" value={selectedRecord.category} colors={colors} even />
+                    <DetailRow label={t('dashboard.detail.category', 'Category')} value={selectedRecord.category ? t(`map.cat.${selectedRecord.category.toLowerCase()}`, selectedRecord.category) : 'Unknown'} colors={colors} even />
                     <DetailRow label="Machine ID" value={selectedRecord.machine_id || 'N/A'} colors={colors} />
-                    <DetailRow label="Health Score" value={`${selectedRecord.confidence?.toFixed(1) ?? '—'}%`} colors={colors} even />
-                    <DetailRow label="Anomaly Score" value={selectedRecord.anomaly_score?.toFixed(4) ?? 'N/A'} colors={colors} />
+                    <DetailRow label={t('dashboard.detail.confidence', 'Health Score')} value={`${selectedRecord.confidence?.toFixed(1) ?? '—'}%`} colors={colors} even />
+                    <DetailRow label={t('dashboard.detail.anomalyScore', 'Anomaly Score')} value={selectedRecord.anomaly_score?.toFixed(4) ?? 'N/A'} colors={colors} />
                     <DetailRow label="File" value={selectedRecord.details?.filename || 'N/A'} colors={colors} even />
                     <DetailRow
-                      label="Date"
+                      label={t('dashboard.detail.recordedDate', 'Date')}
                       value={new Date(selectedRecord.created_at).toLocaleString()}
                       colors={colors}
                     />

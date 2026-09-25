@@ -17,6 +17,7 @@ import {
   Tag,
   Building2,
   RefreshCcw,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,6 +26,7 @@ import { toast } from 'sonner';
 import { RequestChatDialog } from '@/components/RequestChatDialog';
 import { ReportGeneratorModal } from '@/components/ReportGeneratorModal';
 import { getScheduledInfo } from '@/lib/appointment-utils';
+import { getStatusColor, getStatusIcon } from '@/lib/status-helpers';
 
 interface RepairRequest {
   id: string;
@@ -69,7 +71,10 @@ const extractPhotosFromDescription = (desc: string): string[] => {
 };
 
 export const RequestsPage = () => {
-  const { user } = useAuth();
+  const { user, supabaseUser, isLoading: authLoading } = useAuth();
+  const userId = user?.id || supabaseUser?.id;
+  const isCompany = String(user?.role).toLowerCase() === 'company';
+
   const [requests, setRequests] = useState<RepairRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<string | null>(null);
@@ -79,22 +84,22 @@ export const RequestsPage = () => {
   const [reportRequest, setReportRequest] = useState<RepairRequest | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const isCompany = user?.role === 'company';
-
   const fetchRequests = async () => {
-    if (!user) return;
+    if (!userId) {
+      if (!authLoading) setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
+      setFetchError(null);
 
-      // Step 1: fetch the repair requests
+      // Step 1: fetch the repair requests where current user is requester OR company provider
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: requestData, error: requestError } = await (supabase as any)
         .from('repair_requests')
         .select('*')
-        .eq(isCompany ? 'company_id' : 'user_id', user.id)
+        .or(`user_id.eq.${userId},company_id.eq.${userId}`)
         .order('created_at', { ascending: false });
-
-
 
       if (requestError) throw requestError;
       if (!requestData || requestData.length === 0) {
@@ -103,74 +108,80 @@ export const RequestsPage = () => {
       }
 
       // Step 2: collect the IDs of the other party
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const otherPartyIds: string[] = [
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ...new Set((requestData as any[]).map((r: any) => isCompany ? r.user_id : r.company_id).filter(Boolean))
+        ...new Set((requestData as any[]).map((r: any) => (r.user_id === userId ? r.company_id : r.user_id)).filter(Boolean))
       ];
 
-
-      // Step 3: batch-fetch their profiles (name, phone, avatar_url) — bypasses RLS via SECURITY DEFINER RPC
+      // Step 3: batch-fetch their profiles (name, company_name, technician_name, phone, avatar_url)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let profileMap: Record<string, { name: string; phone: string | null; avatar_url: string | null }> = {};
       if (otherPartyIds.length > 0) {
-        // Try via SECURITY DEFINER RPC first (guaranteed to bypass RLS)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: rpcData, error: rpcError } = await (supabase as any)
-          .rpc('get_profiles_for_requests', { user_ids: otherPartyIds });
-
-
-
-        if (!rpcError && rpcData && (rpcData as any[]).length > 0) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (rpcData as any[]).forEach((p: any) => {
-            profileMap[p.id] = { name: p.name, phone: p.phone, avatar_url: p.avatar_url };
-          });
-        } else {
-          // Fallback: direct query (works if RLS "Authenticated users can view all profiles" is active)
+        try {
+          // Direct query on profiles first (fetches company_name, technician_name, name)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const { data: profileData, error: profileError } = await (supabase as any)
             .from('profiles')
-            .select('id, name, phone, avatar_url')
+            .select('id, name, company_name, technician_name, phone, avatar_url')
             .in('id', otherPartyIds);
 
-
-
-          if (profileData) {
+          if (!profileError && profileData && profileData.length > 0) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (profileData as any[]).forEach((p: any) => {
-              profileMap[p.id] = { name: p.name, phone: p.phone, avatar_url: p.avatar_url };
+              const displayName = p.company_name?.trim() || p.name?.trim() || p.technician_name?.trim() || '';
+              profileMap[p.id] = { name: displayName, phone: p.phone, avatar_url: p.avatar_url };
             });
+          } else {
+            // Fallback via SECURITY DEFINER RPC
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data: rpcData } = await (supabase as any)
+              .rpc('get_profiles_for_requests', { user_ids: otherPartyIds });
+
+            if (rpcData && (rpcData as any[]).length > 0) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (rpcData as any[]).forEach((p: any) => {
+                profileMap[p.id] = { name: p.name || '', phone: p.phone, avatar_url: p.avatar_url };
+              });
+            }
           }
+        } catch (e) {
+          console.warn('Could not batch-load profiles, relying on request descriptions:', e);
         }
       }
 
-
-
       // Step 4: merge profile data into each request
-      // If profile fetch failed (e.g. RLS), extract name from the description as last resort fallback
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const merged = (requestData as any[]).map((r: any) => {
-        const profileId = isCompany ? r.user_id : r.company_id;
-        const profile = profileMap[profileId] || null;
+        const otherId = r.user_id === userId ? r.company_id : r.user_id;
+        const profile = profileMap[otherId] || null;
 
-        // Last-resort: parse "Customer Name: ..." from description if profiles couldn't be loaded
+        // Fallbacks from description if profile row is missing or empty
         let fallbackName: string | null = null;
-        if (!profile?.name && r.description) {
-          const nameMatch = (r.description as string).match(/Customer Name:\s*(.+)/);
-          if (nameMatch) fallbackName = nameMatch[1].trim();
+        let fallbackPhone: string | null = null;
+        if (r.description) {
+          const desc = r.description as string;
+          const custNameMatch = desc.match(/Customer Name:\s*(.+)/);
+          const provNameMatch = desc.match(/Provider:\s*(.+)/) || desc.match(/Company:\s*(.+)/);
+          const phoneMatch = desc.match(/Customer Phone:\s*(.+)/);
+
+          if (r.user_id === userId && provNameMatch) {
+            fallbackName = provNameMatch[1].trim();
+          } else if (custNameMatch) {
+            fallbackName = custNameMatch[1].trim();
+          }
+          if (phoneMatch) fallbackPhone = phoneMatch[1].trim();
         }
 
         return {
           ...r,
-          profiles: profile
-            ? profile
-            : fallbackName
-            ? { name: fallbackName, phone: null, avatar_url: null }
-            : null,
+          profiles: {
+            name: profile?.name || fallbackName || (r.user_id === userId ? 'Service Provider' : 'Customer'),
+            phone: profile?.phone || fallbackPhone || null,
+            avatar_url: profile?.avatar_url || null,
+          },
         };
       });
-
-
 
       setFetchError(null);
       setRequests(merged as RepairRequest[]);
@@ -184,7 +195,7 @@ export const RequestsPage = () => {
   };
 
   const fetchUnreadCounts = async () => {
-    if (!user) return;
+    if (!userId) return;
     try {
       // Fetch all unread messages meant for this user across all their requests
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -192,7 +203,7 @@ export const RequestsPage = () => {
         .from('request_messages')
         .select('request_id')
         .eq('is_read', false)
-        .neq('sender_id', user.id);
+        .neq('sender_id', userId);
 
       if (error) throw error;
       
@@ -210,9 +221,9 @@ export const RequestsPage = () => {
     fetchRequests();
     fetchUnreadCounts();
     
-    if (!user) return;
+    if (!userId) return;
 
-    // Subscribe to realtime updates for this user's/company's requests
+    // Subscribe to realtime updates for this user's requests
     const channel = supabase
       .channel('requests-updates')
       .on(
@@ -221,14 +232,22 @@ export const RequestsPage = () => {
           event: '*',
           schema: 'public',
           table: 'repair_requests',
-          filter: `${isCompany ? 'company_id' : 'user_id'}=eq.${user.id}`,
         },
         (payload) => {
-          fetchRequests();
-          if (payload.eventType === 'INSERT') {
-            toast.info(isCompany ? 'You have a new repair request!' : 'Your repair request was submitted successfully.');
-          } else if (payload.eventType === 'UPDATE') {
-            toast.info('A repair request was updated.');
+          const newRow = payload.new as any;
+          const oldRow = payload.old as any;
+          if (
+            newRow?.user_id === userId ||
+            newRow?.company_id === userId ||
+            oldRow?.user_id === userId ||
+            oldRow?.company_id === userId
+          ) {
+            fetchRequests();
+            if (payload.eventType === 'INSERT') {
+              toast.info(newRow?.company_id === userId ? 'You have a new repair request!' : 'Your repair request was submitted successfully.');
+            } else if (payload.eventType === 'UPDATE') {
+              toast.info('A repair request was updated.');
+            }
           }
         }
       )
@@ -245,7 +264,6 @@ export const RequestsPage = () => {
           table: 'request_messages',
         },
         () => {
-          // Re-fetch unread counts whenever messages change (inserted/updated)
           fetchUnreadCounts();
         }
       )
@@ -255,7 +273,7 @@ export const RequestsPage = () => {
       supabase.removeChannel(channel);
       supabase.removeChannel(msgChannel);
     };
-  }, [user, isCompany]); // Removed fetchRequests from dependency array to avoid infinite loop
+  }, [userId, isCompany]); // Removed fetchRequests from dependency array to avoid infinite loop
 
   const updateRequestStatus = async (requestId: string, newStatus: string) => {
     try {

@@ -24,6 +24,7 @@ import {
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../lib/AuthContext';
 import { useThemeContext } from '../../lib/ThemeContext';
+import { useLanguage } from '../../lib/LanguageContext';
 import { supabase } from '../../lib/supabase';
 import { getMlApiConfigError, getMlApiErrorMessage, mlApiUrl } from '../../lib/mlApi';
 import {
@@ -76,6 +77,7 @@ type AudioInput = {
 export default function AnalysisScreen() {
   const { user } = useAuth();
   const { colors, isDark } = useThemeContext();
+  const { t } = useLanguage();
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const audioRecorderState = useAudioRecorderState(audioRecorder);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -351,14 +353,14 @@ export default function AnalysisScreen() {
           <View style={styles.headerIconBg}>
             <Ionicons name="mic" size={18} color={BrandColors.white} />
           </View>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Audio Analysis</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>{t('analysis.title')}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <ThemeToggle />
           {result && (
             <TouchableOpacity style={styles.resetBtn} onPress={resetAnalysis}>
               <Ionicons name="refresh" size={16} color={BrandColors.indigo} />
-              <Text style={styles.resetText}>New</Text>
+              <Text style={styles.resetText}>{t('analysis.reset')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -370,7 +372,7 @@ export default function AnalysisScreen() {
             {/* Step 1: Select Category */}
             <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.stepRow}>
               <StepBadge number={1} color={BrandColors.orange} />
-              <Text style={[styles.stepTitle, { color: colors.foreground }]}>Select Equipment Type</Text>
+              <Text style={[styles.stepTitle, { color: colors.foreground }]}>{t('analysis.step1')}</Text>
             </Animated.View>
             <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.categoryGrid}>
               {MachineCategories.map((cat) => (
@@ -398,7 +400,7 @@ export default function AnalysisScreen() {
                       selectedCategory === cat.value && { color: cat.color, fontWeight: '700' },
                     ]}
                   >
-                    {cat.label}
+                    {t(`map.cat.${cat.value}`, cat.label)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -407,7 +409,7 @@ export default function AnalysisScreen() {
             {/* Step 2: Capture Audio */}
             <Animated.View entering={FadeInDown.duration(500).delay(300)} style={styles.stepRow}>
               <StepBadge number={2} color={BrandColors.blue} />
-              <Text style={[styles.stepTitle, { color: colors.foreground }]}>Capture or Upload Audio</Text>
+              <Text style={[styles.stepTitle, { color: colors.foreground }]}>{t('analysis.step2')}</Text>
             </Animated.View>
             <Animated.View entering={FadeInDown.duration(500).delay(400)}>
               <TouchableOpacity
@@ -481,7 +483,7 @@ export default function AnalysisScreen() {
                   color={isRecording ? BrandColors.white : BrandColors.rose}
                 />
                 <Text style={[styles.recordBtnText, isRecording && styles.recordBtnTextActive]}>
-                  {isRecording ? `Stop Recording (${recordingDuration}s)` : 'Record Audio with Microphone'}
+                  {isRecording ? `${t('analysis.stop')} (${recordingDuration}s)` : t('analysis.record')}
                 </Text>
               </TouchableOpacity>
             </Animated.View>
@@ -489,7 +491,7 @@ export default function AnalysisScreen() {
             {/* Step 3: Analyze */}
             <Animated.View entering={FadeInDown.duration(500).delay(600)} style={styles.stepRow}>
               <StepBadge number={3} color={BrandColors.emerald} />
-              <Text style={[styles.stepTitle, { color: colors.foreground }]}>Analyze</Text>
+              <Text style={[styles.stepTitle, { color: colors.foreground }]}>{t('analysis.step3')}</Text>
             </Animated.View>
             <Animated.View entering={FadeInDown.duration(500).delay(700)}>
               <Animated.View style={analyzeBtnAnim}>
@@ -514,7 +516,7 @@ export default function AnalysisScreen() {
                   ) : (
                     <>
                       <Ionicons name="analytics" size={20} color={BrandColors.white} />
-                      <Text style={styles.analyzeBtnText}>Analyze Audio</Text>
+                      <Text style={styles.analyzeBtnText}>{t('analysis.analyzeBtn')}</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -553,11 +555,11 @@ export default function AnalysisScreen() {
             <Animated.View entering={FadeInDown.duration(500).delay(250)} style={styles.scoresRow}>
               <View style={[styles.scoreCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Text style={[styles.scoreValue, { color: BrandColors.indigo }]}>{result.confidence.toFixed(1)}%</Text>
-                <Text style={[styles.scoreLabel, { color: colors.mutedForeground }]}>Health Score</Text>
+                <Text style={[styles.scoreLabel, { color: colors.mutedForeground }]}>{t('dashboard.detail.confidence')}</Text>
               </View>
               <View style={[styles.scoreCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Text style={[styles.scoreValue, { color: BrandColors.purple }]}>{result.anomaly_score.toFixed(3)}</Text>
-                <Text style={[styles.scoreLabel, { color: colors.mutedForeground }]}>Anomaly Score</Text>
+                <Text style={[styles.scoreLabel, { color: colors.mutedForeground }]}>{t('dashboard.detail.anomalyScore')}</Text>
               </View>
             </Animated.View>
 
@@ -567,7 +569,7 @@ export default function AnalysisScreen() {
                 <View style={styles.recoIconBg}>
                   <Ionicons name="bulb" size={18} color={BrandColors.amber} />
                 </View>
-                <Text style={[styles.recoTitle, { color: colors.foreground }]}>Recommendation</Text>
+                <Text style={[styles.recoTitle, { color: colors.foreground }]}>{t('dashboard.detail.recommendation')}</Text>
               </View>
               <Text style={[styles.recoText, { color: colors.mutedForeground }]}>{result.recommendation}</Text>
             </Animated.View>
@@ -590,7 +592,7 @@ export default function AnalysisScreen() {
                   ) : (
                     <>
                       <Ionicons name="bookmark" size={18} color={BrandColors.white} />
-                      <Text style={styles.saveBtnText}>Save to History</Text>
+                      <Text style={styles.saveBtnText}>{t('analysis.saveHistory')}</Text>
                     </>
                   )}
                 </TouchableOpacity>

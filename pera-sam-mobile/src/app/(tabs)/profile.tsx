@@ -38,6 +38,8 @@ import {
   geocodeAddress,
 } from '../../lib/profileApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLanguage } from '../../lib/LanguageContext';
+
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -53,7 +55,7 @@ const TECH_ITEMS = [
   { name: 'TensorFlow', icon: 'hardware-chip-outline', color: BrandColors.pink },
 ];
 
-type SectionKey = 'profile' | 'password' | 'notifications' | 'privacy' | 'info' | 'account';
+type SectionKey = 'profile' | 'password' | 'notifications' | 'privacy' | 'info' | 'language' | 'account';
 
 const SECTIONS: { key: SectionKey; label: string; icon: string; color: string }[] = [
   { key: 'profile', label: 'Profile', icon: 'person-outline', color: BrandColors.indigo },
@@ -61,15 +63,19 @@ const SECTIONS: { key: SectionKey; label: string; icon: string; color: string }[
   { key: 'notifications', label: 'Notifs', icon: 'notifications-outline', color: BrandColors.blue },
   { key: 'privacy', label: 'Privacy', icon: 'eye-off-outline', color: BrandColors.emerald },
   { key: 'info', label: 'Info', icon: 'information-circle-outline', color: BrandColors.cyan },
+  { key: 'language', label: 'Language', icon: 'language-outline', color: BrandColors.cyan },
   { key: 'account', label: 'Account', icon: 'settings-outline', color: BrandColors.rose },
 ];
+
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { colors, isDark } = useThemeContext();
+  const { language, setLanguage, t } = useLanguage();
   const mlApiConfigError = getMlApiConfigError();
+
 
   // Active settings tab
   const [activeSection, setActiveSection] = useState<SectionKey>('profile');
@@ -361,7 +367,7 @@ export default function ProfileScreen() {
               <Ionicons name="person" size={18} color={BrandColors.white} />
             </View>
             <View>
-              <Text style={[styles.headerTitle, { color: colors.foreground }]}>Profile & Settings</Text>
+              <Text style={[styles.headerTitle, { color: colors.foreground }]}>{t('profile.title')}</Text>
               <Text style={[styles.headerSub, { color: colors.mutedForeground }]} numberOfLines={1}>
                 {email}
               </Text>
@@ -416,12 +422,12 @@ export default function ProfileScreen() {
                     size={12}
                     color={BrandColors.white}
                   />
-                  <Text style={styles.roleText}>{isCompany ? 'Company' : 'User'}</Text>
+                  <Text style={styles.roleText}>{isCompany ? t('common.company') : t('common.user')}</Text>
                 </View>
 
                 <View style={styles.memberBadge}>
                   <Ionicons name="shield-checkmark" size={13} color={BrandColors.white} />
-                  <Text style={styles.memberText}>Member since {createdAt}</Text>
+                  <Text style={styles.memberText}>{t('profile.member')} {createdAt}</Text>
                 </View>
               </View>
             </View>
@@ -453,7 +459,7 @@ export default function ProfileScreen() {
                       color={active ? BrandColors.white : colors.mutedForeground}
                     />
                     <Text style={[styles.tabChipText, { color: colors.mutedForeground }, active && { color: BrandColors.white }]}>
-                      {s.label}
+                      {t(`profile.${s.key as string}`, s.label)}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -843,6 +849,48 @@ export default function ProfileScreen() {
                   </View>
                 ))}
               </View>
+            </Animated.View>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════════
+              SECTION: Language
+          ═══════════════════════════════════════════════════════════════ */}
+          {activeSection === 'language' && (
+            <Animated.View entering={FadeInRight.duration(350).delay(40)}>
+              <SectionCard title={t('profile.selectLanguage')} icon="language-outline" iconColor={BrandColors.cyan}>
+                {(['en', 'si', 'ta'] as const).map((lang) => {
+                  const isSelected = language === lang;
+                  const labels = {
+                    en: { native: 'English', english: 'English' },
+                    si: { native: 'සිංහල', english: 'Sinhala' },
+                    ta: { native: 'தமிழ்', english: 'Tamil' },
+                  };
+                  return (
+                    <TouchableOpacity
+                      key={lang}
+                      style={[
+                        langOptionStyles.card,
+                        {
+                          backgroundColor: isSelected ? BrandColors.cyan : colors.card,
+                          borderColor: isSelected ? BrandColors.cyan : colors.border,
+                        },
+                      ]}
+                      onPress={() => setLanguage(lang)}
+                      activeOpacity={0.8}
+                    >
+                      <View>
+                        <Text style={[langOptionStyles.native, { color: isSelected ? BrandColors.white : colors.foreground }]}>
+                          {labels[lang].native}
+                        </Text>
+                        <Text style={[langOptionStyles.english, { color: isSelected ? 'rgba(255,255,255,0.8)' : colors.mutedForeground }]}>
+                          {labels[lang].english}
+                        </Text>
+                      </View>
+                      {isSelected && <Ionicons name="checkmark-circle" size={22} color={BrandColors.white} />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </SectionCard>
             </Animated.View>
           )}
 
@@ -1497,3 +1545,26 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
+
+// ── Language option styles ─────────────────────────────────────────────────────
+
+const langOptionStyles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    marginBottom: 10,
+  },
+  native: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  english: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+});
+

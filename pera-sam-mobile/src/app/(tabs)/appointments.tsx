@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuth } from '../../lib/AuthContext';
 import { useThemeContext } from '../../lib/ThemeContext';
+import { useLanguage } from '../../lib/LanguageContext';
 import { supabase } from '../../lib/supabase';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import {
@@ -79,6 +80,7 @@ function parseDescription(desc: string): Record<string, string> {
 export default function AppointmentsScreen() {
   const { user } = useAuth();
   const { colors } = useThemeContext();
+  const { t } = useLanguage();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -239,7 +241,7 @@ export default function AppointmentsScreen() {
               </TouchableOpacity>
               <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
                 <Ionicons name={cfg.icon as any} size={12} color={cfg.color} />
-                <Text style={[styles.statusBadgeText, { color: cfg.color }]}>{cfg.label}</Text>
+                <Text style={[styles.statusBadgeText, { color: cfg.color }]}>{t(`appointments.status.${item.status}`, cfg.label)}</Text>
               </View>
             </View>
 
@@ -360,12 +362,12 @@ export default function AppointmentsScreen() {
             <Ionicons name="calendar" size={18} color={BrandColors.white} />
           </View>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-            {isCompany ? 'Service Appointments' : 'My Appointments'}
+            {isCompany ? t('tab.appointments') : t('tab.appointments')}
           </Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <View style={styles.headerBadge}>
-            <Text style={styles.headerBadgeText}>{appointments.length} total</Text>
+            <Text style={styles.headerBadgeText}>{appointments.length}</Text>
           </View>
           <ThemeToggle />
         </View>
@@ -381,7 +383,7 @@ export default function AppointmentsScreen() {
             ]}
             onPress={() => setSelectedDate('all')}
           >
-            <Text style={[styles.dateChipLabel, { color: colors.mutedForeground }, selectedDate === 'all' && styles.dateChipTextActive]}>All</Text>
+            <Text style={[styles.dateChipLabel, { color: colors.mutedForeground }, selectedDate === 'all' && styles.dateChipTextActive]}>{t('appointments.filter.all', 'All')}</Text>
             <Text style={[styles.dateChipNum, { color: colors.foreground }, selectedDate === 'all' && styles.dateChipTextActive]}>📅</Text>
           </TouchableOpacity>
           {dateStrip.map((d) => (
@@ -404,15 +406,15 @@ export default function AppointmentsScreen() {
       <Animated.View entering={FadeInDown.duration(500).delay(150)} style={styles.statsRow}>
         <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: BrandColors.amber }]}>
           <Text style={[styles.statNumber, { color: BrandColors.amber }]}>{stats.pending}</Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Pending</Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('requests.filter.pending')}</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: BrandColors.blue }]}>
           <Text style={[styles.statNumber, { color: BrandColors.blue }]}>{stats.accepted}</Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Confirmed</Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('requests.filter.accepted')}</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: BrandColors.emerald }]}>
           <Text style={[styles.statNumber, { color: BrandColors.emerald }]}>{stats.completed}</Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Done</Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('requests.filter.done')}</Text>
         </View>
       </Animated.View>
 
@@ -434,7 +436,7 @@ export default function AppointmentsScreen() {
                 selectedFilter === f.id && styles.filterChipTextActive,
               ]}
             >
-              {f.label}
+              {t(`appointments.filter.${f.id}`, f.label)}
             </Text>
           </TouchableOpacity>
         ))}

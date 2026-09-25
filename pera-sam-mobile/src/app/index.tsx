@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,21 +13,80 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSupabaseConfigError, isSupabaseConfigured, supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { BrandColors, Typography, BorderRadius, Shadows } from '../constants/theme';
 import { GlassCard, FloatingOrb, useScalePress } from '../components/AnimatedUI';
+import { useLanguage } from '../lib/LanguageContext';
+import type { Language } from '../lib/LanguageContext';
+
+// ── Language picker data ───────────────────────────────────────────────────────
+
+const LANGUAGE_OPTIONS: { lang: Language; flag: string; native: string; english: string }[] = [
+  { lang: 'en', flag: '🇬🇧', native: 'English', english: 'English' },
+  { lang: 'si', flag: '🇱🇰', native: 'සිංහල', english: 'Sinhala' },
+  { lang: 'ta', flag: '🇱🇰', native: 'தமிழ்', english: 'Tamil' },
+];
+
+const LANG_KEY = '@perasam:language';
+
+// ── Header band (shared between picker and login) ─────────────────────────────
+
+function HeaderBand() {
+  return (
+    <View style={styles.headerBand}>
+      {/* Layered gradient stops */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo }]} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.purple, opacity: 0.6 }]} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.cyan, opacity: 0.25, top: '50%' }]} />
+
+      {/* Floating orbs for depth */}
+      <FloatingOrb color="#ffffff" size={80} top={20} right={-20} delay={0} />
+      <FloatingOrb color="#ffffff" size={50} top={60} left={10} delay={400} />
+      <FloatingOrb color={BrandColors.pink} size={40} top={10} left={60} delay={800} />
+
+      <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.headerBandInner}>
+        <View style={styles.logoCircle}>
+          <Ionicons name="mic" size={28} color={BrandColors.white} />
+        </View>
+        <View>
+          <Text style={styles.brandName}>PERA-SAM</Text>
+          <Text style={styles.brandTag}>Sound Analysis Manager</Text>
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
+
+// ── Root screen component ──────────────────────────────────────────────────────
 
 export default function LoginScreen() {
   const { setDemoSession } = useAuth();
+  const { setLanguage, t } = useLanguage();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
+  // null = still loading, false = need to pick, true = picked
+  const [langPicked, setLangPicked] = useState<boolean | null>(null);
+
   const { animatedStyle: btnAnim, onPressIn, onPressOut } = useScalePress();
+
+  // Check if language has been persisted before
+  useEffect(() => {
+    AsyncStorage.getItem(LANG_KEY)
+      .then((val) => {
+        setLangPicked(val !== null);
+      })
+      .catch(() => {
+        setLangPicked(false);
+      });
+  }, []);
 
   async function handleLogin() {
     if (!email.trim() || !password.trim()) {
@@ -67,6 +126,79 @@ export default function LoginScreen() {
     }
   }
 
+  // ── Loading splash ────────────────────────────────────────────────────────
+
+  if (langPicked === null) {
+    return (
+      <View style={styles.splashContainer}>
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo }]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.purple, opacity: 0.6 }]} />
+        <FloatingOrb color="#ffffff" size={120} top={60} right={-30} delay={0} />
+        <FloatingOrb color={BrandColors.pink} size={70} top={200} left={-20} delay={500} />
+        <View style={styles.splashInner}>
+          <View style={styles.logoCircleLarge}>
+            <Ionicons name="mic" size={40} color={BrandColors.white} />
+          </View>
+          <Text style={styles.splashBrand}>PERA-SAM</Text>
+          <Text style={styles.splashTag}>Sound Analysis Manager</Text>
+          <ActivityIndicator color="rgba(255,255,255,0.7)" style={{ marginTop: 32 }} />
+        </View>
+      </View>
+    );
+  }
+
+  // ── Language picker ────────────────────────────────────────────────────────
+
+  if (!langPicked) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+        >
+          <HeaderBand />
+
+          <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.titleBlock}>
+            <Text style={styles.pageTitle}>{t('login.chooseLanguage')}</Text>
+            <Text style={styles.pageSubtitle}>
+              {'ඔබේ භාෂාව තෝරන්න  •  உங்கள் மொழியை தேர்வுசெய்யுங்கள்'}
+            </Text>
+          </Animated.View>
+
+          <View style={styles.langCards}>
+            {LANGUAGE_OPTIONS.map((opt, i) => (
+              <Animated.View
+                key={opt.lang}
+                entering={FadeInDown.duration(450).delay(300 + i * 100)}
+              >
+                <TouchableOpacity
+                  style={styles.langCard}
+                  activeOpacity={0.75}
+                  onPress={async () => {
+                    await setLanguage(opt.lang);
+                    setLangPicked(true);
+                  }}
+                >
+                  <Text style={styles.langFlag}>{opt.flag}</Text>
+                  <View style={styles.langCardText}>
+                    <Text style={styles.langNative}>{opt.native}</Text>
+                    <Text style={styles.langEnglish}>{opt.english}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={BrandColors.mutedForeground} />
+                </TouchableOpacity>
+              </Animated.View>
+            ))}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  // ── Login form ─────────────────────────────────────────────────────────────
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -76,34 +208,13 @@ export default function LoginScreen() {
         contentContainerStyle={styles.scrollContainer}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Gradient-like header band */}
-        <View style={styles.headerBand}>
-          {/* Layered gradient stops */}
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo }]} />
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.purple, opacity: 0.6 }]} />
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.cyan, opacity: 0.25, top: '50%' }]} />
-
-          {/* Floating orbs for depth */}
-          <FloatingOrb color="#ffffff" size={80} top={20} right={-20} delay={0} />
-          <FloatingOrb color="#ffffff" size={50} top={60} left={10} delay={400} />
-          <FloatingOrb color={BrandColors.pink} size={40} top={10} left={60} delay={800} />
-
-          <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.headerBandInner}>
-            <View style={styles.logoCircle}>
-              <Ionicons name="mic" size={28} color={BrandColors.white} />
-            </View>
-            <View>
-              <Text style={styles.brandName}>PERA-SAM</Text>
-              <Text style={styles.brandTag}>Sound Analysis Manager</Text>
-            </View>
-          </Animated.View>
-        </View>
+        <HeaderBand />
 
         {/* Title */}
         <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.titleBlock}>
-          <Text style={styles.pageTitle}>Welcome Back</Text>
+          <Text style={styles.pageTitle}>{t('login.welcome')}</Text>
           <Text style={styles.pageSubtitle}>
-            Sign in to monitor your equipment health
+            {t('login.subtitle')}
           </Text>
         </Animated.View>
 
@@ -112,7 +223,7 @@ export default function LoginScreen() {
           <GlassCard style={styles.formCard} intensity="strong">
             {/* Email */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>{t('login.email')}</Text>
               <View style={styles.inputWrap}>
                 <Ionicons
                   name="mail-outline"
@@ -135,7 +246,7 @@ export default function LoginScreen() {
 
             {/* Password */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>{t('login.password')}</Text>
               <View style={styles.inputWrap}>
                 <Ionicons
                   name="lock-closed-outline"
@@ -180,10 +291,10 @@ export default function LoginScreen() {
                     <Ionicons name="checkmark" size={12} color={BrandColors.white} />
                   )}
                 </View>
-                <Text style={styles.rememberText}>Remember me</Text>
+                <Text style={styles.rememberText}>{t('login.rememberMe')}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => router.push('/forgot-password' as any)}>
-                <Text style={styles.forgotText}>Forgot password?</Text>
+                <Text style={styles.forgotText}>{t('login.forgotPassword')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -204,7 +315,7 @@ export default function LoginScreen() {
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <>
-                    <Text style={styles.primaryBtnText}>Sign In</Text>
+                    <Text style={styles.primaryBtnText}>{t('login.signIn')}</Text>
                     <Ionicons name="arrow-forward" size={18} color={BrandColors.white} />
                   </>
                 )}
@@ -215,9 +326,9 @@ export default function LoginScreen() {
 
         {/* Sign Up link */}
         <Animated.View entering={FadeInDown.duration(500).delay(500)} style={styles.signupRow}>
-          <Text style={styles.signupText}>{"Don't have an account? "}</Text>
+          <Text style={styles.signupText}>{t('login.noAccount') + ' '}</Text>
           <TouchableOpacity onPress={() => router.push('/register' as any)}>
-            <Text style={styles.signupLink}>Sign up</Text>
+            <Text style={styles.signupLink}>{t('login.signUp')}</Text>
           </TouchableOpacity>
         </Animated.View>
 
@@ -244,6 +355,41 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingBottom: 40,
+  },
+
+  // Splash
+  splashContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  splashInner: {
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  logoCircleLarge: {
+    width: 88,
+    height: 88,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  splashBrand: {
+    fontSize: 34,
+    fontWeight: '800',
+    color: BrandColors.white,
+    letterSpacing: -0.5,
+  },
+  splashTag: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500',
+    marginTop: 6,
   },
 
   // Header band
@@ -298,6 +444,38 @@ const styles = StyleSheet.create({
   pageSubtitle: {
     ...Typography.body,
     color: BrandColors.mutedForeground,
+  },
+
+  // Language picker cards
+  langCards: {
+    gap: 12,
+  },
+  langCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: BrandColors.white,
+    borderRadius: 16,
+    padding: 20,
+    ...Shadows.md,
+    borderWidth: 1,
+    borderColor: BrandColors.border,
+  },
+  langFlag: {
+    fontSize: 32,
+    marginRight: 16,
+  },
+  langCardText: {
+    flex: 1,
+  },
+  langNative: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: BrandColors.foreground,
+  },
+  langEnglish: {
+    fontSize: 13,
+    color: BrandColors.mutedForeground,
+    marginTop: 2,
   },
 
   // Form card

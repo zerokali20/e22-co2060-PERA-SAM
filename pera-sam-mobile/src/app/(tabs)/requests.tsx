@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../lib/AuthContext';
 import { useThemeContext } from '../../lib/ThemeContext';
+import { useLanguage } from '../../lib/LanguageContext';
 import { supabase } from '../../lib/supabase';
 import {
   BrandColors,
@@ -74,6 +75,7 @@ function parseDescription(raw: string): Record<string, string> {
 export default function RequestsScreen() {
   const { user } = useAuth();
   const { colors, isDark } = useThemeContext();
+  const { t } = useLanguage();
   const params = useLocalSearchParams<{ requestProviderId?: string; requestProviderName?: string }>();
   const [requests, setRequests] = useState<RepairRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -253,7 +255,9 @@ export default function RequestsScreen() {
               </View>
               <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
                 <Ionicons name={cfg.icon as any} size={12} color={cfg.color} />
-                <Text style={[styles.statusBadgeText, { color: cfg.color }]}>{cfg.label}</Text>
+                <Text style={[styles.statusBadgeText, { color: cfg.color }]}>
+                  {t(`requests.status.${item.status}`, cfg.label)}
+                </Text>
               </View>
             </View>
 
@@ -323,7 +327,7 @@ export default function RequestsScreen() {
                     }}
                   >
                     <Ionicons name="chatbubble-outline" size={16} color={BrandColors.indigo} />
-                    <Text style={styles.chatBtnText}>Message</Text>
+                    <Text style={styles.chatBtnText}>{t('requests.chat')}</Text>
                   </TouchableOpacity>
 
                   {/* Company-only action buttons */}
@@ -388,13 +392,13 @@ export default function RequestsScreen() {
             <Ionicons name="chatbubbles" size={18} color={BrandColors.white} />
           </View>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-            {isCompany ? 'Repair Requests' : 'My Requests'}
+            {isCompany ? t('requests.title') : (t('dashboard.myRequests') || t('requests.title'))}
           </Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <ThemeToggle />
           <View style={[styles.headerCountBadge, isDark && { backgroundColor: 'rgba(139, 92, 246, 0.2)' }]}>
-            <Text style={styles.headerCount}>{requests.length} total</Text>
+            <Text style={styles.headerCount}>{requests.length}</Text>
           </View>
         </View>
       </Animated.View>
@@ -403,15 +407,15 @@ export default function RequestsScreen() {
       <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.statsRow}>
         <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: BrandColors.amber }]}>
           <Text style={[styles.statNumber, { color: BrandColors.amber }]}>{stats.pending}</Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Pending</Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('requests.filter.pending')}</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: BrandColors.blue }]}>
           <Text style={[styles.statNumber, { color: BrandColors.blue }]}>{stats.accepted}</Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Active</Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('requests.filter.accepted')}</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: BrandColors.emerald }]}>
           <Text style={[styles.statNumber, { color: BrandColors.emerald }]}>{stats.completed}</Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Done</Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('requests.filter.done')}</Text>
         </View>
       </Animated.View>
 
@@ -434,7 +438,7 @@ export default function RequestsScreen() {
                 selectedFilter === f.id && styles.filterChipTextActive,
               ]}
             >
-              {f.label}
+              {t(`requests.filter.${f.id}`, f.label)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -459,7 +463,7 @@ export default function RequestsScreen() {
             <View style={styles.emptyIconBg}>
               <Ionicons name="chatbubbles-outline" size={44} color={BrandColors.indigo} />
             </View>
-            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No requests</Text>
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('requests.noRequests')}</Text>
             <Text style={[styles.emptyDesc, { color: colors.mutedForeground }]}>
               {selectedFilter !== 'all'
                 ? `No ${selectedFilter} requests found.`
@@ -474,7 +478,7 @@ export default function RequestsScreen() {
               <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo, borderRadius: BorderRadius.md }]} />
               <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.purple, opacity: 0.4, borderRadius: BorderRadius.md }]} />
               <Ionicons name="map-outline" size={16} color={BrandColors.white} />
-              <Text style={styles.findProvidersBtnText}>Find Service Providers</Text>
+              <Text style={styles.findProvidersBtnText}>{t('map.findService')}</Text>
             </TouchableOpacity>
           </View>
         }

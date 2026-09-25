@@ -14,13 +14,17 @@ import {
   ScrollView,
   Image,
   Alert,
+  Modal,
+  Pressable,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../lib/AuthContext';
 import { useThemeContext } from '../../lib/ThemeContext';
+import { useLanguage } from '../../lib/LanguageContext';
 import { supabase } from '../../lib/supabase';
 import {
   BrandColors,
@@ -31,15 +35,13 @@ import {
 import { useScalePress } from '../../components/AnimatedUI';
 import { ThemeToggle } from '../../components/ThemeToggle';
 
-
-
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface ServiceProvider {
   id: string;
   name: string;
   address: string;
-  rating: number;
-  reviews: number;
+  rating: number; // 0 if unrated, or 1-5
+  userRating?: number; // User's personal rating if rated
   phone: string;
   categories: string[];
   distance: number; // km
@@ -59,7 +61,18 @@ const SERVICE_CATEGORIES = [
   { id: 'industrial', label: 'General', icon: 'construct-outline', color: BrandColors.cyan },
 ] as const;
 
-// ─── Haversine Distance ──────────────────────────────────────────────────────
+// ─── Ratings Storage Key & Labels ────────────────────────────────────────────
+const RATINGS_STORAGE_KEY = '@pera_sam_company_ratings';
+
+const STAR_DESCRIPTIONS: Record<number, string> = {
+  1: '1 Star - Poor',
+  2: '2 Stars - Fair',
+  3: '3 Stars - Good',
+  4: '4 Stars - Very Good',
+  5: '5 Stars - Excellent!',
+};
+
+// ─── Haversine Distance & Helpers ────────────────────────────────────────────
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -70,10 +83,109 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function formatDistance(dist: number): string {
+  if (dist < 1) {
+    return `${Math.round(dist * 1000)} m`;
+  }
+  return `${dist.toFixed(1)} km`;
+}
+
+// Known coordinates for Sri Lankan regions
+const SRI_LANKA_LOCATIONS: Record<string, { lat: number; lng: number }> = {
+  peradeniya: { lat: 7.2525, lng: 80.5925 },
+  gatembe: { lat: 7.2680, lng: 80.5970 },
+  kandy: { lat: 7.2906, lng: 80.6337 },
+  katugastota: { lat: 7.3150, lng: 80.6210 },
+  tennekumbura: { lat: 7.2880, lng: 80.6650 },
+  digana: { lat: 7.2990, lng: 80.7350 },
+  kundasale: { lat: 7.2830, lng: 80.6860 },
+  colombo: { lat: 6.9271, lng: 79.8612 },
+  gampaha: { lat: 7.0840, lng: 79.9943 },
+  kurunegala: { lat: 7.4863, lng: 80.3623 },
+  negombo: { lat: 7.2008, lng: 79.8736 },
+  matale: { lat: 7.4675, lng: 80.6234 },
+  galle: { lat: 6.0535, lng: 80.2210 },
+  matara: { lat: 5.9549, lng: 80.5550 },
+  anuradhapura: { lat: 8.3114, lng: 80.4037 },
+  badulla: { lat: 6.9934, lng: 81.0550 },
+  ratnapura: { lat: 6.7056, lng: 80.3847 },
+  kegalle: { lat: 7.2513, lng: 80.3464 },
+  dehiwala: { lat: 6.8511, lng: 79.8653 },
+  moratuwa: { lat: 6.7730, lng: 79.8816 },
+  nugegoda: { lat: 6.8649, lng: 79.8997 },
+  battaramulla: { lat: 6.8990, lng: 79.9160 },
+};
+
+function resolveCompanyCoordinates(p: any): { lat: number; lng: number } {
+  const lat = typeof p.location_lat === 'number' ? p.location_lat : null;
+  const lng = typeof p.location_lng === 'number' ? p.location_lng : null;
+
+  const isGeneric =
+    lat === null ||
+    lng === null ||
+    (Math.abs(lat - 7.2525) < 0.0001 && Math.abs(lng - 80.5925) < 0.0001);
+
+  if (isGeneric && p.address) {
+    const addr = String(p.address).toLowerCase();
+    for (const [key, coords] of Object.entries(SRI_LANKA_LOCATIONS)) {
+      if (addr.includes(key)) {
+        return coords;
+      }
+    }
+  }
+
+  if (lat !== null && lng !== null && !isGeneric) {
+    return { lat, lng };
+  }
+
+  // Deterministic offset based on company ID character codes so companies don't stack on top of each other
+  const idStr = String(p.id || 'default');
+  const h1 = ((idStr.charCodeAt(0) || 5) % 11) - 5;
+  const h2 = ((idStr.charCodeAt(1) || 7) % 11) - 5;
+  return {
+    lat: 7.2525 + h1 * 0.007,
+    lng: 80.5925 + h2 * 0.007,
+  };
+}
+
+const DEMO_PROVIDERS_TEMPLATE = [
+  {
+    id: 'demo-prov-1',
+    name: 'Peradeniya Industrial Services',
+    address: 'Gatembe Road, Peradeniya',
+    phone: '+94 81 238 8888',
+    categories: ['fan', 'pump', 'industrial'],
+    available: true,
+    lat: 7.2680,
+    lng: 80.5970,
+  },
+  {
+    id: 'demo-prov-2',
+    name: 'Kandy Hydro & Bearing Tech',
+    address: 'William Gopallawa Mawatha, Kandy',
+    phone: '+94 81 222 4545',
+    categories: ['pump', 'vehicle_bearing', 'valve'],
+    available: true,
+    lat: 7.2906,
+    lng: 80.6337,
+  },
+  {
+    id: 'demo-prov-3',
+    name: 'Lanka Acoustic & Machine Care',
+    address: 'Katugastota Main Road, Kandy',
+    phone: '+94 81 494 9900',
+    categories: ['fan', 'slider', 'valve', 'industrial'],
+    available: true,
+    lat: 7.3150,
+    lng: 80.6210,
+  },
+];
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function MapScreen() {
   const { user } = useAuth();
   const { colors, isDark } = useThemeContext();
+  const { t } = useLanguage();
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -83,7 +195,61 @@ export default function MapScreen() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<'loading' | 'granted' | 'denied'>('loading');
 
+  // Rating State
+  const [userRatings, setUserRatings] = useState<Record<string, number>>({});
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [ratingTarget, setRatingTarget] = useState<ServiceProvider | null>(null);
+  const [selectedStars, setSelectedStars] = useState(5);
+
   const { animatedStyle: repairBtnAnim, onPressIn: repairIn, onPressOut: repairOut } = useScalePress();
+
+  // ── Load stored ratings from AsyncStorage ──────────────────────────────
+  useEffect(() => {
+    const loadRatings = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(RATINGS_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          setUserRatings(parsed);
+        }
+      } catch (err) {
+        console.warn('Failed to load ratings from storage:', err);
+      }
+    };
+    loadRatings();
+  }, []);
+
+  // ── Rate a company handler ─────────────────────────────────────────────
+  const handleRateCompany = async (companyId: string, rating: number, companyName: string) => {
+    setUserRatings((prev) => {
+      const updated = { ...prev, [companyId]: rating };
+      AsyncStorage.setItem(RATINGS_STORAGE_KEY, JSON.stringify(updated)).catch(() => {});
+      return updated;
+    });
+
+    setProviders((prev) =>
+      prev.map((p) => (p.id === companyId ? { ...p, rating, userRating: rating } : p))
+    );
+
+    if (user && isUuid(user.id) && isUuid(companyId)) {
+      (supabase as any)
+        .from('company_ratings')
+        .upsert(
+          {
+            user_id: user.id,
+            company_id: companyId,
+            rating,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,company_id' }
+        )
+        .then(() => {})
+        .catch(() => {});
+    }
+
+    setRatingModalVisible(false);
+    Alert.alert('Rating Submitted', `Thank you! You rated ${companyName} ${rating} star${rating > 1 ? 's' : ''}.`);
+  };
 
   // ── Get user location ──────────────────────────────────────────────────
   const requestLocation = useCallback(async () => {
@@ -106,6 +272,13 @@ export default function MapScreen() {
       }
 
       setLocationStatus('granted');
+      // Try fast last-known position first for instant UI response
+      const last = await Location.getLastKnownPositionAsync();
+      if (last) {
+        setUserLocation({ lat: last.coords.latitude, lng: last.coords.longitude });
+      }
+
+      // Then get fresh accurate GPS fix
       const loc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
@@ -133,69 +306,37 @@ export default function MapScreen() {
       );
 
       let mapped: ServiceProvider[] = companyProfiles.map((p: any) => {
-        const lat = p.location_lat || 7.2525;
-        const lng = p.location_lng || 80.5925;
-        const dist = haversineKm(userLocation.lat, userLocation.lng, lat, lng);
+        const coords = resolveCompanyCoordinates(p);
+        const dist = haversineKm(userLocation.lat, userLocation.lng, coords.lat, coords.lng);
+        const storedRate = userRatings[p.id] || 0;
 
         return {
           id: p.id,
           name: p.company_name || p.name || 'Service Provider',
           address: p.address || 'Address not listed',
-          rating: 4.5 + ((p.id.charCodeAt(0) % 10) / 20),
-          reviews: (p.id.charCodeAt(1) % 100) + 10,
+          rating: storedRate,
+          userRating: storedRate > 0 ? storedRate : undefined,
           phone: p.contact_numbers?.[0] || p.phone || 'N/A',
           categories: p.service_categories || ['fan', 'pump', 'industrial'],
           distance: Math.round(dist * 10) / 10,
           available: true,
-          lat,
-          lng,
+          lat: coords.lat,
+          lng: coords.lng,
           avatar_url: p.avatar_url || null,
         };
       });
 
       if (mapped.length === 0) {
-        const demo: ServiceProvider[] = [
-          {
-            id: 'demo-prov-1',
-            name: 'Peradeniya Industrial Services',
-            address: 'Gatembe Road, Peradeniya',
-            rating: 4.9,
-            reviews: 84,
-            phone: '+94 81 238 8888',
-            categories: ['fan', 'pump', 'industrial'],
-            distance: Math.round(haversineKm(userLocation.lat, userLocation.lng, 7.2680, 80.5970) * 10) / 10,
-            available: true,
-            lat: 7.2680,
-            lng: 80.5970,
-          },
-          {
-            id: 'demo-prov-2',
-            name: 'Kandy Hydro & Bearing Tech',
-            address: 'William Gopallawa Mawatha, Kandy',
-            rating: 4.7,
-            reviews: 52,
-            phone: '+94 81 222 4545',
-            categories: ['pump', 'vehicle_bearing', 'valve'],
-            distance: Math.round(haversineKm(userLocation.lat, userLocation.lng, 7.2906, 80.6337) * 10) / 10,
-            available: true,
-            lat: 7.2906,
-            lng: 80.6337,
-          },
-          {
-            id: 'demo-prov-3',
-            name: 'Lanka Acoustic & Machine Care',
-            address: 'Katugastota Main Road, Kandy',
-            rating: 4.8,
-            reviews: 119,
-            phone: '+94 81 494 9900',
-            categories: ['fan', 'slider', 'valve', 'industrial'],
-            distance: Math.round(haversineKm(userLocation.lat, userLocation.lng, 7.3150, 80.6210) * 10) / 10,
-            available: true,
-            lat: 7.3150,
-            lng: 80.6210,
-          },
-        ];
-        mapped = demo;
+        mapped = DEMO_PROVIDERS_TEMPLATE.map((d) => {
+          const dist = haversineKm(userLocation.lat, userLocation.lng, d.lat, d.lng);
+          const storedRate = userRatings[d.id] || 0;
+          return {
+            ...d,
+            rating: storedRate,
+            userRating: storedRate > 0 ? storedRate : undefined,
+            distance: Math.round(dist * 10) / 10,
+          };
+        });
       }
 
       // Sort by distance
@@ -203,52 +344,22 @@ export default function MapScreen() {
       setProviders(mapped);
     } catch {
       // Show demo providers on error
-      const demo: ServiceProvider[] = [
-        {
-          id: 'demo-prov-1',
-          name: 'Peradeniya Industrial Services',
-          address: 'Gatembe Road, Peradeniya',
-          rating: 4.9,
-          reviews: 84,
-          phone: '+94 81 238 8888',
-          categories: ['fan', 'pump', 'industrial'],
-          distance: Math.round(haversineKm(userLocation.lat, userLocation.lng, 7.2680, 80.5970) * 10) / 10,
-          available: true,
-          lat: 7.2680,
-          lng: 80.5970,
-        },
-        {
-          id: 'demo-prov-2',
-          name: 'Kandy Hydro & Bearing Tech',
-          address: 'William Gopallawa Mawatha, Kandy',
-          rating: 4.7,
-          reviews: 52,
-          phone: '+94 81 222 4545',
-          categories: ['pump', 'vehicle_bearing', 'valve'],
-          distance: Math.round(haversineKm(userLocation.lat, userLocation.lng, 7.2906, 80.6337) * 10) / 10,
-          available: true,
-          lat: 7.2906,
-          lng: 80.6337,
-        },
-        {
-          id: 'demo-prov-3',
-          name: 'Lanka Acoustic & Machine Care',
-          address: 'Katugastota Main Road, Kandy',
-          rating: 4.8,
-          reviews: 119,
-          phone: '+94 81 494 9900',
-          categories: ['fan', 'slider', 'valve', 'industrial'],
-          distance: Math.round(haversineKm(userLocation.lat, userLocation.lng, 7.3150, 80.6210) * 10) / 10,
-          available: true,
-          lat: 7.3150,
-          lng: 80.6210,
-        },
-      ];
+      const demo = DEMO_PROVIDERS_TEMPLATE.map((d) => {
+        const dist = haversineKm(userLocation.lat, userLocation.lng, d.lat, d.lng);
+        const storedRate = userRatings[d.id] || 0;
+        return {
+          ...d,
+          rating: storedRate,
+          userRating: storedRate > 0 ? storedRate : undefined,
+          distance: Math.round(dist * 10) / 10,
+        };
+      });
+      demo.sort((a, b) => a.distance - b.distance);
       setProviders(demo);
     } finally {
       setLoading(false);
     }
-  }, [userLocation, user]);
+  }, [userLocation, user, userRatings]);
 
   useEffect(() => {
     if (userLocation) fetchProviders();
@@ -273,24 +384,43 @@ export default function MapScreen() {
 
   const [chatLoadingId, setChatLoadingId] = useState<string | null>(null);
 
+  // Helper to validate UUID
+  const isUuid = (str?: string) =>
+    !!str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
   // ── Open or initiate chat with provider ──────────────────────────────
   const handleOpenChat = async (provider: ServiceProvider) => {
     if (!user) {
       Alert.alert('Sign In Required', 'Please sign in to message service providers.', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign In', onPress: () => router.push('/(auth)/login' as any) },
+        { text: 'Sign In', onPress: () => router.push('/' as any) },
       ]);
       return;
     }
 
     setChatLoadingId(provider.id);
     try {
+      const isCompanyUser = user.user_metadata?.role === 'company';
+      const isDemo = !isUuid(provider.id) || !isUuid(user.id);
+
+      if (isDemo) {
+        router.push({
+          pathname: '/chat',
+          params: {
+            requestId: `demo-req-${provider.id}`,
+            isCompany: isCompanyUser ? '1' : '0',
+            otherPartyName: provider.name,
+          },
+        } as any);
+        return;
+      }
+
       // Check if an inquiry or request already exists for this provider
       const { data: existing, error: searchErr } = await (supabase as any)
         .from('repair_requests')
         .select('id')
         .eq('user_id', user.id)
-        .or(`company_id.eq.${provider.id},assigned_to.eq.${provider.id}`)
+        .eq('company_id', provider.id)
         .order('created_at', { ascending: false })
         .limit(1);
 
@@ -299,7 +429,7 @@ export default function MapScreen() {
           pathname: '/chat',
           params: {
             requestId: existing[0].id,
-            isCompany: '0',
+            isCompany: isCompanyUser ? '1' : '0',
             otherPartyName: provider.name,
           },
         } as any);
@@ -312,27 +442,40 @@ export default function MapScreen() {
         .insert({
           user_id: user.id,
           company_id: provider.id,
-          assigned_to: provider.id,
           machine_type: 'General Service Inquiry',
-          description: `Direct inquiry initiated via Find Service map with ${provider.name}.`,
+          brand: 'General',
+          description: `Customer: ${user.user_metadata?.name || user.email || 'User'}\nDirect inquiry initiated via Find Service map with ${provider.name}.`,
           status: 'pending',
-          priority: 'medium',
         })
         .select('id')
         .single();
 
-      if (insertErr) throw insertErr;
+      if (insertErr) {
+        console.error('Failed to create inquiry repair request:', insertErr);
+        throw insertErr;
+      }
 
+      if (newReq?.id) {
+        router.push({
+          pathname: '/chat',
+          params: {
+            requestId: newReq.id,
+            isCompany: isCompanyUser ? '1' : '0',
+            otherPartyName: provider.name,
+          },
+        } as any);
+      }
+    } catch (err: any) {
+      console.warn('Could not initiate conversation via database, opening chat fallback:', err);
+      // Fallback: navigate directly to chat with request ID so user can still access chat
       router.push({
         pathname: '/chat',
         params: {
-          requestId: newReq.id,
-          isCompany: '0',
+          requestId: `demo-req-${provider.id}`,
+          isCompany: user.user_metadata?.role === 'company' ? '1' : '0',
           otherPartyName: provider.name,
         },
       } as any);
-    } catch (err: any) {
-      Alert.alert('Error', err.message || 'Could not initiate conversation with provider.');
     } finally {
       setChatLoadingId(null);
     }
@@ -399,18 +542,43 @@ export default function MapScreen() {
                 styles.distanceText,
                 locationStatus === 'granted' && { color: BrandColors.emerald },
               ]}>
-                {locationStatus === 'loading' ? '...' : `${item.distance} km`}
+                {locationStatus === 'loading' ? '...' : formatDistance(item.distance)}
               </Text>
             </View>
           </View>
 
           {/* Rating & Categories */}
           <View style={styles.providerDetails}>
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={14} color={BrandColors.amber} />
-              <Text style={[styles.ratingText, { color: colors.foreground }]}>{item.rating.toFixed(1)}</Text>
-              <Text style={[styles.reviewsText, { color: colors.mutedForeground }]}>({item.reviews})</Text>
-            </View>
+            <TouchableOpacity
+              style={[
+                styles.ratingBadgeBtn,
+                {
+                  backgroundColor: (item.rating > 0 ? BrandColors.amber : BrandColors.indigo) + '15',
+                  borderColor: (item.rating > 0 ? BrandColors.amber : BrandColors.indigo) + '35',
+                },
+              ]}
+              onPress={() => {
+                setRatingTarget(item);
+                setSelectedStars(item.userRating || (item.rating > 0 ? Math.round(item.rating) : 5));
+                setRatingModalVisible(true);
+              }}
+              activeOpacity={0.7}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <Ionicons
+                name={item.rating > 0 ? 'star' : 'star-outline'}
+                size={13}
+                color={BrandColors.amber}
+              />
+              <Text style={[styles.ratingText, { color: colors.foreground }]}>
+                {item.rating > 0 ? `${item.rating}.0` : t('map.rate')}
+              </Text>
+              <View style={[styles.ratePill, { backgroundColor: BrandColors.amber + '22' }]}>
+                <Text style={[styles.ratePillText, { color: BrandColors.amber }]}>
+                  {item.userRating ? t('map.rated') : t('map.rate')}
+                </Text>
+              </View>
+            </TouchableOpacity>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -418,10 +586,11 @@ export default function MapScreen() {
             >
               {item.categories.slice(0, 3).map((cat) => {
                 const catConfig = SERVICE_CATEGORIES.find(c => c.id === cat);
+                const fallbackLabel = catConfig?.label || (cat === 'vehicle_bearing' ? 'Bearing' : cat === 'industrial' ? 'General' : cat.charAt(0).toUpperCase() + cat.slice(1).replace(/_/g, ' '));
                 return (
                   <View key={cat} style={[styles.categoryPill, { backgroundColor: (catConfig?.color || BrandColors.muted) + '15' }]}>
                     <Text style={[styles.categoryPillText, { color: catConfig?.color || colors.mutedForeground }]}>
-                      {cat.charAt(0).toUpperCase() + cat.slice(1).replace('_', ' ')}
+                      {t(`map.cat.${cat}`, fallbackLabel)}
                     </Text>
                   </View>
                 );
@@ -443,6 +612,33 @@ export default function MapScreen() {
                 <Text style={[styles.contactText, { color: colors.foreground }]}>{item.phone}</Text>
               </View>
 
+              {/* Quick Interactive Rating Row */}
+              <View style={[styles.quickRateBox, { backgroundColor: isDark ? '#1a2234' : BrandColors.muted }]}>
+                <View style={styles.quickRateHeader}>
+                  <Ionicons name="star" size={13} color={BrandColors.amber} />
+                  <Text style={[styles.quickRateTitle, { color: colors.foreground }]}>
+                    {item.userRating ? `Your Rating: ${item.userRating}★` : 'Rate Provider:'}
+                  </Text>
+                </View>
+                <View style={styles.quickStarsRow}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <TouchableOpacity
+                      key={star}
+                      onPress={() => handleRateCompany(item.id, star, item.name)}
+                      style={styles.quickStarBtn}
+                      activeOpacity={0.6}
+                      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                    >
+                      <Ionicons
+                        name={star <= (item.userRating || item.rating) ? 'star' : 'star-outline'}
+                        size={20}
+                        color={BrandColors.amber}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
               {/* Action Buttons */}
               <View style={styles.actionRow}>
                 <TouchableOpacity
@@ -456,7 +652,7 @@ export default function MapScreen() {
                   ) : (
                     <>
                       <Ionicons name="chatbubble-ellipses-outline" size={15} color={BrandColors.indigo} />
-                      <Text style={[styles.actionBtnChatText, { color: BrandColors.indigo }]}>Message</Text>
+                      <Text style={[styles.actionBtnChatText, { color: BrandColors.indigo }]}>{t('map.message')}</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -476,7 +672,7 @@ export default function MapScreen() {
                     <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo, borderRadius: BorderRadius.md }]} />
                     <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.purple, opacity: 0.4, borderRadius: BorderRadius.md }]} />
                     <Ionicons name="construct-outline" size={15} color={BrandColors.white} />
-                    <Text style={styles.actionBtnPrimaryText}>Repair</Text>
+                    <Text style={styles.actionBtnPrimaryText}>{t('requests.title').split(' ')[0]}</Text>
                   </TouchableOpacity>
                 </Animated.View>
 
@@ -485,7 +681,7 @@ export default function MapScreen() {
                   onPress={() => openInMaps(item.lat, item.lng, item.name)}
                 >
                   <Ionicons name="map-outline" size={15} color={BrandColors.blue} />
-                  <Text style={styles.actionBtnSecondaryText}>Route</Text>
+                  <Text style={styles.actionBtnSecondaryText}>{t('map.route')}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -495,7 +691,7 @@ export default function MapScreen() {
                   onPress={() => Linking.openURL(`tel:${item.phone}`)}
                 >
                   <Ionicons name="call" size={14} color={BrandColors.emerald} />
-                  <Text style={styles.callBtnText}>Call Now</Text>
+                  <Text style={styles.callBtnText}>{t('map.callNow')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -527,7 +723,7 @@ export default function MapScreen() {
           <View style={styles.headerIconBg}>
             <Ionicons name="map" size={18} color={BrandColors.white} />
           </View>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Find Services</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>{t('map.findService')}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <ThemeToggle />
@@ -541,7 +737,7 @@ export default function MapScreen() {
               styles.locationText,
               { color: locationStatus === 'granted' ? BrandColors.emerald : colors.mutedForeground },
             ]}>
-              {locationStatus === 'granted' ? 'GPS Active' : 'Default'}
+              {locationStatus === 'granted' ? t('map.gpsActive') : t('map.defaultLoc')}
             </Text>
           </View>
         </View>
@@ -569,7 +765,7 @@ export default function MapScreen() {
           <Ionicons name="search-outline" size={18} color={BrandColors.indigo} />
           <TextInput
             style={[styles.searchInput, { color: colors.foreground }]}
-            placeholder="Search by name or location..."
+            placeholder={t('map.searchPlaceholder')}
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -612,7 +808,7 @@ export default function MapScreen() {
                   selectedCategory === cat.id && styles.catChipTextActive,
                 ]}
               >
-                {cat.label}
+                {t(`map.cat.${cat.id}`, cat.label)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -630,7 +826,7 @@ export default function MapScreen() {
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={BrandColors.indigo} />
-          <Text style={styles.loadingText}>Finding service providers...</Text>
+          <Text style={styles.loadingText}>{t('map.loading')}</Text>
         </View>
       ) : (
         <FlatList
@@ -651,7 +847,7 @@ export default function MapScreen() {
               <View style={styles.emptyIconBg}>
                 <Ionicons name="search-outline" size={44} color={BrandColors.indigo} />
               </View>
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No providers found</Text>
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('map.noProviders')}</Text>
               <Text style={[styles.emptyDesc, { color: colors.mutedForeground }]}>
                 {searchQuery
                   ? 'Try a different search term or category.'
@@ -661,6 +857,103 @@ export default function MapScreen() {
           }
         />
       )}
+
+      {/* Rate Company Modal */}
+      <Modal
+        visible={ratingModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRatingModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setRatingModalVisible(false)}
+        >
+          <Pressable
+            style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderLeft}>
+                <View style={styles.modalStarIconBg}>
+                  <Ionicons name="star" size={18} color={BrandColors.amber} />
+                </View>
+                <Text style={[styles.modalTitle, { color: colors.foreground }]}>{t('map.rateCompany')}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setRatingModalVisible(false)}
+                style={styles.modalCloseBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={20} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Provider Info */}
+            {ratingTarget && (
+              <View style={[styles.modalProviderBox, { backgroundColor: isDark ? '#1a2234' : BrandColors.muted }]}>
+                <Text style={[styles.modalProviderName, { color: colors.foreground }]}>
+                  {ratingTarget.name}
+                </Text>
+                <Text style={[styles.modalProviderAddr, { color: colors.mutedForeground }]} numberOfLines={1}>
+                  {ratingTarget.address}
+                </Text>
+              </View>
+            )}
+
+            <Text style={[styles.modalSubtitle, { color: colors.mutedForeground }]}>
+              Tap the stars below to set your rating:
+            </Text>
+
+            {/* Interactive Stars */}
+            <View style={styles.modalStarsRow}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity
+                  key={star}
+                  onPress={() => setSelectedStars(star)}
+                  style={styles.modalStarBtn}
+                  activeOpacity={0.6}
+                  hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                >
+                  <Ionicons
+                    name={star <= selectedStars ? 'star' : 'star-outline'}
+                    size={38}
+                    color={BrandColors.amber}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Star Description */}
+            <Text style={[styles.modalStarLabel, { color: BrandColors.amber }]}>
+              {STAR_DESCRIPTIONS[selectedStars] || `${selectedStars} Stars`}
+            </Text>
+
+            {/* Actions */}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalCancelBtn, { borderColor: colors.border }]}
+                onPress={() => setRatingModalVisible(false)}
+              >
+                <Text style={[styles.modalCancelText, { color: colors.foreground }]}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalSubmitBtn}
+                onPress={() => {
+                  if (ratingTarget) {
+                    handleRateCompany(ratingTarget.id, selectedStars, ratingTarget.name);
+                  }
+                }}
+              >
+                <Ionicons name="checkmark" size={16} color={BrandColors.white} />
+                <Text style={styles.modalSubmitText}>{t('map.submitRating')}</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -809,9 +1102,23 @@ const styles = StyleSheet.create({
     marginTop: 12,
     gap: 12,
   },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  ratingText: { fontSize: 13, fontWeight: '800', color: BrandColors.foreground },
-  reviewsText: { fontSize: 11, color: BrandColors.mutedForeground },
+  ratingBadgeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+  },
+  ratingText: { fontSize: 12, fontWeight: '800', color: BrandColors.foreground },
+  ratePill: {
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 2,
+  },
+  ratePillText: { fontSize: 9, fontWeight: '800' },
   categoryScroll: { flex: 1 },
   categoryPill: {
     paddingHorizontal: 10,
@@ -840,6 +1147,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   contactText: { ...Typography.bodySmall, color: BrandColors.foreground, fontWeight: '600' },
+
+  // Quick rating row inside expanded section
+  quickRateBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.md,
+  },
+  quickRateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  quickRateTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  quickStarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  quickStarBtn: {
+    padding: 2,
+  },
 
   actionRow: { flexDirection: 'row', gap: 8 },
   actionBtnChat: {
@@ -933,6 +1267,114 @@ const styles = StyleSheet.create({
   },
   locationBannerBtnText: {
     fontSize: 11,
+    fontWeight: '800',
+    color: BrandColors.white,
+  },
+
+  // Rate Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: BorderRadius.xl,
+    padding: 22,
+    borderWidth: 1,
+    ...Shadows.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  modalHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  modalStarIconBg: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: BrandColors.amber + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  modalProviderBox: {
+    padding: 10,
+    borderRadius: BorderRadius.md,
+    marginBottom: 12,
+  },
+  modalProviderName: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modalProviderAddr: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  modalStarsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+    marginVertical: 10,
+  },
+  modalStarBtn: {
+    padding: 2,
+  },
+  modalStarLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 18,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  modalSubmitBtn: {
+    flex: 2,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    backgroundColor: BrandColors.indigo,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  modalSubmitText: {
+    fontSize: 13,
     fontWeight: '800',
     color: BrandColors.white,
   },
